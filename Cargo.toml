@@ -1,0 +1,9 @@
+[package]
+name = "xscp"
+version = "0.1.0"
+edition = "2024"
+description = "A minimal text-based chat protocol built in Rust"
+repository = "https://github.com/ivan-amon/xscp"
+license = "MIT"
+
+[dependencies]
