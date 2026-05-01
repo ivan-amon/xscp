@@ -1,10 +1,14 @@
 # XSCP
 
-**XSCP** *(XSCP Simple Chat Protocol)* is a text-based chat protocol built from scratch in Rust — inspired by the simplicity and clarity of the [IRC protocol](https://en.wikipedia.org/wiki/Internet_Relay_Chat).
+<p align="center">
+  <img src="docs/XSCP.png" alt="XSCP Logo" />
+</p>
+
+**XSCP** *(XSCP Simple Chat Protocol)* is a text-based chat protocol built from scratch in Rust.
 
 ## Overview
 
-XSCP defines a minimal client-server architecture for real-time text messaging over TCP. The protocol is intentionally simple: clients connect to a server, send line-delimited messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
+XSCP defines a minimal client-server architecture for real-time text messaging over TCP. The protocol is intentionally simple: clients log in with a nickname, connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
 
 The project currently ships two binaries:
 
@@ -20,7 +24,6 @@ The next milestone is migrating the networking layer to **[Tokio](https://tokio.
 - [x] TCP server/client foundation
 - [ ] Async I/O with Tokio
 - [ ] Multi-client broadcast
-- [ ] Usernames and channels (IRC-style)
 
 ## Usage
 
@@ -30,22 +33,10 @@ The next milestone is migrating the networking layer to **[Tokio](https://tokio.
 cargo run --bin server <port>
 ```
 
-```
-Listening on port 7878
-127.0.0.1:54321 connected
-Request from 127.0.0.1:54321: hello world
-```
-
 ### Client
 
 ```bash
 cargo run --bin client <ip> <port>
-```
-
-```
-Connected successfully to 127.0.0.1:7878
-> hello world
-Echo: hello world
 ```
 
 ## License
