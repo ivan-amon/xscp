@@ -1,4 +1,4 @@
-//! XSCP Response PDU representation.
+//! XSCP Response PDU parsing and representation.
 //!
 //! This module defines the logic to create and parse an XSCP response.
 
@@ -9,7 +9,7 @@
 /// ```text
 /// +-----------------------------------------------------------------------+
 /// |   Status Code (1-3 ASCII digits)   |   Reason Phrase (Max 32 Bytes)   |
-/// +-----------------------------------------+++++++++---------------------+
+/// +-----------------------------------------------------------------------+
 /// ```
 ///
 /// Fields are delimited by `|`. The total PDU size must not exceed
