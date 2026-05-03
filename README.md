@@ -8,7 +8,7 @@
 
 ## Overview
 
-XSCP defines a minimal client-server architecture for real-time text messaging over TCP. The protocol is intentionally simple: clients log in with a nickname, connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
+XSCP defines a minimal client-server architecture for real-time text messaging over TCP. The protocol is intentionally simple: clients connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
 
 The project currently ships two binaries:
 
@@ -44,4 +44,4 @@ cargo run --bin client <ip> <port>
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
-Built with ❤️ in Rust.
+Built by Iván with ❤️ in Rust.
