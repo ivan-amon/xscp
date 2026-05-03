@@ -7,3 +7,6 @@ repository = "https://github.com/ivan-amon/xscp"
 license = "MIT"
 
 [dependencies]
+
+[workspace]
+members = ["client", "server"]
