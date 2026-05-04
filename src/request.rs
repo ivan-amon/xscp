@@ -17,7 +17,7 @@
 /// Fields are delimited by `|`. Both `Nickname` and `Message` are UTF-8 encoded.
 /// The total PDU size must not exceed **512 bytes** (delimiters included).
 ///
-/// Note: currently `|` and `\r\n` characters are disallowed in both `Nickname` and `Message` 
+/// Note: `|` and `\r\n` characters are disallowed in both `Nickname` and `Message` 
 /// to prevent message smuggling attacks.
 #[derive(Debug)]
 pub struct XscpRequest<'a> {
@@ -33,8 +33,8 @@ impl<'a> XscpRequest<'a> {
     /// the message does not contain disallowed characters such as the `|` and `\r\n` characters.
     /// 
     /// # Errors
-    /// - `InvalidNickname`: The nickname contains disallowed characters and is of invalid length.
-    /// - `InvalidMessage`: The message contains disallowed characters and is of invalid length.
+    /// - `InvalidNickname`: The nickname contains disallowed characters or is of invalid length.
+    /// - `InvalidMessage`: The message contains disallowed characters or is of invalid length.
     pub fn try_new(opcode: OpCode, nickname: &'a str, message: &'a str) -> Result<Self, RequestError> {
         if nickname.contains(['|', '\r', '\n']) || nickname.len() < 3 || nickname.len() > 32 {
             return Err(RequestError::InvalidNickname);
@@ -98,6 +98,8 @@ impl<'a> XscpRequest<'a> {
     }
 }
 
+/// Possible OPCODEs in XSCP requests.
+/// 
 /// Wire Format Reference:
 /// - Login: `LOGN`
 /// - Chat:  `CHAT`

@@ -1,10 +1,15 @@
 [package]
 name = "xscp"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+authors = ["Ivan Amon <ivan.amon.dev@gmail.com>"]
 description = "A minimal text-based chat protocol built in Rust"
+readme = "README_CRATE.md"
 repository = "https://github.com/ivan-amon/xscp"
+documentation = "https://docs.rs/xscp"
 license = "MIT"
+keywords = ["chat", "protocol", "networking", "parser", "no-deps"]
+categories = ["network-programming", "parser-implementations"]
 
 [dependencies]
 
