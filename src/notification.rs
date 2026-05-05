@@ -17,7 +17,7 @@
 /// Fields are delimited by `|`. Both `Source` and `Message` are UTF-8 encoded.
 /// The total PDU size must not exceed **512 bytes** (delimiters included).
 /// Source can be:
-/// - A nickname of an user (for `BRDC` notifications).
+/// - A hostname or nickname of a client (for `BRDC` notifications).
 /// - The string `XSCP_SERVER` (from server for notifications).
 ///
 /// Note: `|` and `\r\n` characters are disallowed in `Source`. `Message` disallows `\r\n`
