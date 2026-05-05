@@ -4,7 +4,7 @@
 [![Docs.rs](https://docs.rs/xscp/badge.svg)](https://docs.rs/xscp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
-A minimal, zero-dependency Rust implementation of the **XSCP** (XSCP Simple Chat Protocol): a small, line-oriented, text-based chat protocol with a strict 512-byte PDU budget.
+A minimal, zero-dependency Rust implementation of the **XSCP** (XSCP Stream Communication Protocol): a small, line-oriented, text-based communication protocol with a strict 512-byte PDU budget.
 
 This crate provides only the **protocol primitives** — request, response and notification PDUs, with safe constructors and parsers. It is transport-agnostic: bring your own TCP, TLS, WebSocket or whatever you like, and use these types to build a client, a server, or anything in between.
 
@@ -37,12 +37,12 @@ xscp = "0.1"
 use xscp::request::{XscpRequest, OpCode};
 
 // Build a request programmatically.
-let req = XscpRequest::try_new(OpCode::Chat, "alice", "hello, world!")?;
-assert_eq!(req.opcode(), OpCode::Chat);
+let req = XscpRequest::try_new(OpCode::Send, "alice", "hello, world!")?;
+assert_eq!(req.opcode(), OpCode::Send);
 assert_eq!(req.nickname(), "alice");
 
 // Parse a request received from the wire.
-let raw = "CHAT|alice|hello, world!\r\n";
+let raw = "SEND|alice|hello, world!\r\n";
 let parsed = XscpRequest::parse(raw)?;
 assert_eq!(parsed.message(), "hello, world!");
 # Ok::<(), xscp::request::RequestError>(())
@@ -94,7 +94,7 @@ XSCP is a line-oriented, UTF-8, pipe-delimited protocol. Every PDU ends with `\r
 | OpCode | Wire | Meaning                  |
 | ------ | ---- | ------------------------ |
 | Login  | `LOGN` | User registration       |
-| Chat   | `CHAT` | Global message broadcast |
+| Send   | `SEND` | Global message broadcast |
 | Exit   | `EXIT` | Graceful disconnection   |
 
 ### Response PDU

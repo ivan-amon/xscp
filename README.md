@@ -9,11 +9,11 @@
   <img src="docs/XSCP.png" alt="XSCP Logo" />
 </p>
 
-**XSCP** *(XSCP Simple Chat Protocol)* is a text-based chat protocol. This repository contains its **implementation in Rust**, along with a **client** and a **server**.
+**XSCP** *(XSCP Stream Communication Protocol)* is a text-based communication protocol. This repository contains its **implementation in Rust**, along with a **client** and a **server**.
 
 ## Overview
 
-XSCP defines a minimal client-server architecture for real-time text messaging over TCP. The protocol is intentionally simple: clients connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
+XSCP defines a minimal client-server architecture for real-time text communication over TCP. The protocol is intentionally simple: clients connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
 
 PDUs are line-oriented, UTF-8 and pipe-delimited, with a strict **512-byte budget**. The wire format is fully documented in the [`xscp` crate docs](https://docs.rs/xscp).
 
