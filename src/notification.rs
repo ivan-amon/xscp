@@ -20,8 +20,8 @@
 /// - A nickname of an user (for `BRDC` notifications).
 /// - The string `XSCP_SERVER` (from server for notifications).
 ///
-/// Note: `|` and `\r\n` characters are disallowed in `Message` to prevent 
-/// message smuggling attacks.
+/// Note: `|` and `\r\n` characters are disallowed in `Source`. `Message` disallows `\r\n`
+/// to prevent message smuggling attacks. `Message` may contain `|` characters.
 
 
 #[derive(Debug)]
@@ -33,10 +33,11 @@ pub struct XscpNotification<'a> {
 
 impl<'a> XscpNotification<'a> {
     /// Creates a new XSCP notification.
-    /// 
+    ///
     /// This method protects against 'message smuggling' attacks by validating the input parameters and ensuring that the
-    /// the message does not contain disallowed characters such as the `|` and `\r\n` characters.
-    /// 
+    /// source and message do not contain disallowed characters. The source rejects `|` and `\r\n`; the message rejects
+    /// only `\r\n` (pipes are allowed in the message).
+    ///
     /// # Errors
     /// - `InvalidSource`: The source contains disallowed characters or is of invalid length.
     /// - `InvalidMessage`: The message contains disallowed characters or is of invalid length.
@@ -45,7 +46,7 @@ impl<'a> XscpNotification<'a> {
             return Err(NotificationError::InvalidSource);
         }
 
-        if message.contains(['|', '\r', '\n']) || message.len() > 472 {
+        if message.contains(['\r', '\n']) || message.len() > 472 {
             return Err(NotificationError::InvalidMessage);
         }
 
@@ -66,19 +67,16 @@ impl<'a> XscpNotification<'a> {
         }
 
         let raw_notification = raw_notification.trim_end_matches("\r\n");
-        let raw_notification: Vec<&str> = raw_notification.split('|').collect();
+        let mut parts = raw_notification.splitn(3, '|');
 
-        if raw_notification.len() != 3 {
-            return Err(NotificationError::MalformedNotification);
-        }
+        let notification_type = parts.next().ok_or(NotificationError::MalformedNotification)?;
+        let source = parts.next().ok_or(NotificationError::MalformedNotification)?;
+        let message = parts.next().ok_or(NotificationError::MalformedNotification)?;
 
-        let notification_type = match raw_notification[0] {
+        let notification_type = match notification_type {
             "BRDC" => NotificationType::Broadcast,
             _ => return Err(NotificationError::UnknownNotificationType),
         };
-
-        let source = raw_notification[1];
-        let message = raw_notification[2];
 
         Self::try_new(notification_type, source, message)
     }
@@ -167,8 +165,10 @@ mod tests {
 
     #[test]
     fn message_with_pipe() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Bob", "Hello|World!").unwrap_err();
-        assert_eq!(result, NotificationError::InvalidMessage);
+        let result = XscpNotification::try_new(NotificationType::Broadcast, "Bob", "Hello|World!").unwrap();
+        assert_eq!(result.notification_type(), NotificationType::Broadcast);
+        assert_eq!(result.source(), "Bob");
+        assert_eq!(result.message(), "Hello|World!");
     }
 
     #[test]
@@ -216,9 +216,11 @@ mod tests {
     }
 
     #[test]
-    fn invalid_request_with_extra_fields() {
+    fn parse_message_with_pipe() {
         let raw_notification = "BRDC|Alice|Hello|ExtraField\r\n";
-        let result = XscpNotification::parse(raw_notification).unwrap_err();
-        assert_eq!(result, NotificationError::MalformedNotification);
+        let result = XscpNotification::parse(raw_notification).unwrap();
+        assert_eq!(result.notification_type(), NotificationType::Broadcast);
+        assert_eq!(result.source(), "Alice");
+        assert_eq!(result.message(), "Hello|ExtraField");
     }
 }

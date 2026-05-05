@@ -17,8 +17,8 @@
 /// Fields are delimited by `|`. Both `Nickname` and `Message` are UTF-8 encoded.
 /// The total PDU size must not exceed **512 bytes** (delimiters included).
 ///
-/// Note: `|` and `\r\n` characters are disallowed in both `Nickname` and `Message` 
-/// to prevent message smuggling attacks.
+/// Note: `|` and `\r\n` characters are disallowed in `Nickname`. `Message` disallows `\r\n`
+/// to prevent message smuggling attacks. `Message` may contain `|` characters.
 #[derive(Debug)]
 pub struct XscpRequest<'a> {
     opcode: OpCode,
@@ -28,10 +28,11 @@ pub struct XscpRequest<'a> {
 
 impl<'a> XscpRequest<'a> {
     /// Creates a new XSCP request.
-    /// 
+    ///
     /// This method protects against 'message smuggling' attacks by validating the input parameters and ensuring that the
-    /// the message does not contain disallowed characters such as the `|` and `\r\n` characters.
-    /// 
+    /// the nickname and message do not contain disallowed characters. The nickname rejects `|` and `\r\n`; the message
+    /// rejects only `\r\n` (pipes are allowed in the message).
+    ///
     /// # Errors
     /// - `InvalidNickname`: The nickname contains disallowed characters or is of invalid length.
     /// - `InvalidMessage`: The message contains disallowed characters or is of invalid length.
@@ -40,7 +41,7 @@ impl<'a> XscpRequest<'a> {
             return Err(RequestError::InvalidNickname);
         }
 
-        if message.contains(['|', '\r', '\n']) || message.len() > 472 {
+        if message.contains(['\r', '\n']) || message.len() > 472 {
             return Err(RequestError::InvalidMessage);
         }
 
@@ -61,23 +62,18 @@ impl<'a> XscpRequest<'a> {
         }
 
         let raw_request = raw_request.trim_end_matches("\r\n");
-        let raw_request: Vec<&str> = raw_request.split('|').collect();
+        let mut parts = raw_request.splitn(3, '|');
 
-        if raw_request.len() != 3 {
-            return Err(RequestError::MalformedRequest);
-        }
+        let opcode = parts.next().ok_or(RequestError::MalformedRequest)?;
+        let nickname = parts.next().ok_or(RequestError::MalformedRequest)?;
+        let message = parts.next().ok_or(RequestError::MalformedRequest)?;
 
-        // Opcode: must be 4 bytes and should exist
-        let opcode = raw_request[0];
         let opcode = match opcode {
             "LOGN" => OpCode::Login,
             "CHAT" => OpCode::Chat,
             "EXIT" => OpCode::Exit,
             _ => return Err(RequestError::UnknownOpcode),
         };
-
-        let nickname = raw_request[1];
-        let message = raw_request[2];
 
         Self::try_new(opcode, nickname, message)
     }
@@ -177,8 +173,10 @@ mod tests {
 
     #[test]
     fn message_with_pipe() {
-        let request = XscpRequest::try_new(OpCode::Chat, "nickname", "message with | (pipe)").unwrap_err();
-        assert_eq!(RequestError::InvalidMessage, request);
+        let request = XscpRequest::try_new(OpCode::Chat, "nickname", "message with | (pipe)").unwrap();
+        assert_eq!(OpCode::Chat, request.opcode());
+        assert_eq!("nickname", request.nickname());
+        assert_eq!("message with | (pipe)", request.message());
     }
 
     #[test]
@@ -220,9 +218,11 @@ mod tests {
     }
 
     #[test]
-    fn invalid_request_with_extra_fields() {
+    fn parse_message_with_pipe() {
         let raw_request = "CHAT|nickname|message with | (pipe)\r\n";
-        let error = XscpRequest::parse(raw_request).unwrap_err();
-        assert_eq!(RequestError::MalformedRequest, error);
+        let request = XscpRequest::parse(raw_request).unwrap();
+        assert_eq!(OpCode::Chat, request.opcode());
+        assert_eq!("nickname", request.nickname());
+        assert_eq!("message with | (pipe)", request.message());
     }
 }

@@ -9,7 +9,7 @@
   <img src="docs/XSCP.png" alt="XSCP Logo" />
 </p>
 
-**XSCP** *(XSCP Simple Chat Protocol)* is a text-based chat protocol. This repository contains its **reference implementation in Rust**, along with a **client** and a **server**.
+**XSCP** *(XSCP Simple Chat Protocol)* is a text-based chat protocol. This repository contains its **implementation in Rust**, along with a **client** and a **server**.
 
 ## Overview
 
@@ -53,6 +53,7 @@ cargo build --workspace
 - [x] TCP server/client foundation
 - [ ] Async I/O Server with Tokio
 - [ ] Multi-client broadcast
+- [ ] Channels
 - [ ] TLS support
 
 ## Contributing

@@ -12,7 +12,7 @@ This crate provides only the **protocol primitives** — request, response and n
 
 - **Zero dependencies.** The crate compiles against the standard library only — no third-party code in your dependency tree.
 - **Safe parsing.** All constructors and parsers reject malformed input and validate field lengths.
-- **Anti-smuggling by construction.** Field delimiters (`|`) and line terminators (`\r\n`) are forbidden inside fields, so a hostile payload cannot inject extra PDUs.
+- **Anti-smuggling by construction.** Line terminators (`\r\n`) are forbidden inside any field, and the `|` delimiter is forbidden inside header fields (opcode, nickname, source), so a hostile payload cannot inject extra PDUs. The trailing `Message` field may contain `|` because parsing splits on the first two pipes only.
 - **Borrowed, allocation-light API.** PDU types hold `&str` slices into the original buffer; parsing does not copy your data.
 - **Strict wire format.** Every PDU has a documented byte budget and a fixed structure; nothing is left implicit.
 
@@ -127,10 +127,11 @@ The `Source` field is either a user nickname or the literal `XSCP_SERVER` for se
 
 XSCP fields are validated at construction and parse time:
 
-- `|`, `\r` and `\n` are rejected inside any field.
+- `\r` and `\n` are rejected inside any field.
+- `|` is rejected inside the opcode, nickname, source and reason phrase fields. It is **allowed** inside the `Message` field of requests and notifications: parsing uses `splitn(3, '|')`, so only the first two pipes act as delimiters and everything after is preserved verbatim as the message.
 - Nicknames and sources must be 3–32 bytes; messages must not exceed 472 bytes; reason phrases must not exceed 32 bytes.
 
-This makes **PDU smuggling** (a hostile payload terminating its own PDU early to inject another) impossible by construction. As a consumer of the crate you still need to enforce the 512-byte read budget on the transport side.
+This makes **PDU smuggling** (a hostile payload terminating its own PDU early to inject another) impossible by construction — a smuggled payload would need to embed `\r\n`, which is forbidden in every field. As a consumer of the crate you still need to enforce the 512-byte read budget on the transport side.
 
 ## Use cases
 
