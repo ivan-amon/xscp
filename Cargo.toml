@@ -1,6 +1,6 @@
 [package]
 name = "xscp"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["Ivan Amon <ivan.amon.dev@gmail.com>"]
 description = "A minimal text-based chat protocol built in Rust"

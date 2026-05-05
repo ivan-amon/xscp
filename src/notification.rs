@@ -22,8 +22,6 @@
 ///
 /// Note: `|` and `\r\n` characters are disallowed in `Source`. `Message` disallows `\r\n`
 /// to prevent message smuggling attacks. `Message` may contain `|` characters.
-
-
 #[derive(Debug)]
 pub struct XscpNotification<'a> {
     notification_type: NotificationType,
