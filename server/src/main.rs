@@ -1,23 +1,21 @@
-//! # XSCP Server
-//!
-//! This crate implements an example of an XSCP concurrent server.
+//! # XSCP Server.
+use server::connection::connection::Connection;
+use server::session::auth::Sessions;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
-use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use server::store_session;
+use tokio::net::{TcpListener, TcpStream};
 use xscp::XscpRequest;
-
-const MAX_AUTH_ATTEMPTS: u8 = 3;
 
 /// Runs an XSCP Server instance on the 7878 port.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     let addr = "0.0.0.0:7878";
     let listener = TcpListener::bind(addr).await?;
     println!("XSCP Server is running on port 7878");
 
-    let sessions: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
+    let sessions: Sessions = Arc::new(Mutex::new(HashSet::new()));
 
     loop {
         let (socket, peer_addr) = listener.accept().await?;
@@ -35,67 +33,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_connection(
     socket: TcpStream,
-    sessions: Arc<Mutex<HashSet<String>>>,
+    sessions: Sessions,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Read the request from the socket.
-    // 2. Negotiate (authentication, max 3 attempts).
-    // 3. If auth succeeds, process the request and send a response.
-    let mut auth_attempts: u8 = 0;
-    
+
+    let peer_addr = socket.peer_addr().unwrap();
     let (reader, mut writer) = socket.into_split();
     let mut buf_reader = BufReader::new(reader);
     let mut raw_request = String::new();
+    let mut connection = Connection::new(peer_addr, sessions.clone());
 
     loop {
         raw_request.clear();
 
-        let xscp_request = match buf_reader.read_line(&mut raw_request).await {
+        let request = match buf_reader.read_line(&mut raw_request).await {
             Ok(0) => {
                 println!("Connection closed by client.");
                 return Ok(());
-            },
+            }
             Ok(_) => {
-                let xscp_request = match XscpRequest::parse(&raw_request) {
+                let request = match XscpRequest::parse(&raw_request) {
                     Ok(req) => req,
                     Err(_) => {
                         return Err("Failed to parse XSCP request".into());
                     }
                 };
-                xscp_request
-            },
+                request
+            }
             Err(err) => {
                 println!("Failed to read from socket: {}. Closing connection.", err);
                 return Err(Box::new(err));
             }
         };
 
-        // todo: add the other opcodes and their handling logic
-        match xscp_request.opcode() {
-            xscp::OpCode::Login => {
-                let result = {
-                    let mut guard = sessions.lock().unwrap();
-                    store_session(&xscp_request, &mut guard)
-                };
-                match result {
-                    Ok(_) => {
-                        println!("User '{}' logged in successfully.", xscp_request.source());
-                        writer.write_all(b"Login successful\r\n").await?; // todo: send an XscpResponse
-                    },
-                    Err(err) => {
-                        println!("Login failed for host '{}': {}.", xscp_request.source(), err);
-                        writer.write_all(format!("Login failed: {}\r\n", err).as_bytes()).await?; // todo: send an XscpResponse
-                        auth_attempts += 1;
-                    }
-                }
-            },
-            xscp::OpCode::Send => todo!(),
-            xscp::OpCode::Exit => todo!(),
-        }
-
-
-        if auth_attempts >= MAX_AUTH_ATTEMPTS {
-            println!("Maximum authentication attempts reached. Closing connection.");
-            return Err("Maximum authentication attempts reached".into());
-        }
+        let response = connection.handle(request);
+        writer.write_all(response.reason_phrase().as_bytes()).await?; 
     }
 }
