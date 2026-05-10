@@ -40,7 +40,7 @@ async fn handle_connection(
     let (reader, mut writer) = socket.into_split();
     let mut buf_reader = BufReader::new(reader);
     let mut raw_request = String::new();
-    let mut connection = Connection::new(peer_addr, sessions.clone());
+    let mut connection = Connection::new(peer_addr, sessions);
 
     loop {
         raw_request.clear();

@@ -6,9 +6,9 @@ use super::storage::store_session;
 pub type Sessions = Arc<Mutex<HashSet<String>>>;
 
 pub fn auth(
-    request: XscpRequest,
+    request: &XscpRequest,
     auth_attempts: u8,
-    sessions: Sessions,
+    sessions: &Mutex<HashSet<String>>,
 ) -> XscpResponse<'static> {
 
     if auth_attempts >= 2 {
@@ -31,8 +31,8 @@ mod tests {
     #[test]
     fn correct_auth() {
         let request = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
-        let sessions = Arc::new(Mutex::new(HashSet::<String>::new()));
-        let response = auth(request, 0, sessions);
+        let sessions = Mutex::new(HashSet::<String>::new());
+        let response = auth(&request, 0, &sessions);
 
         assert_eq!(response.status_code(), 200);
         assert_eq!(response.reason_phrase(), "LOGIN SUCCESSFUL");
@@ -40,11 +40,11 @@ mod tests {
 
     #[test]
     fn invalid_auth() {
-        let sessions = Arc::new(Mutex::new(HashSet::<String>::new()));
+        let sessions = Mutex::new(HashSet::<String>::new());
         sessions.lock().unwrap().insert("test".to_string());
 
         let request = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
-        let response = auth(request, 0, sessions);
+        let response = auth(&request, 0, &sessions);
 
         assert_eq!(response.status_code(), 401);
         assert_eq!(response.reason_phrase(), "INVALID CREDENTIALS");
@@ -53,8 +53,8 @@ mod tests {
     #[test]
     fn too_many_auth_attempts() {
         let request = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
-        let sessions = Arc::new(Mutex::new(HashSet::<String>::new()));
-        let response = auth(request, 3, sessions);
+        let sessions = Mutex::new(HashSet::<String>::new());
+        let response = auth(&request, 3, &sessions);
 
         assert_eq!(response.status_code(), 402);
         assert_eq!(response.reason_phrase(), "TOO MANY ATTEMPTS");
