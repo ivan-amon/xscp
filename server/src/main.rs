@@ -1,7 +1,7 @@
 //! # XSCP Server.
 use server::connection::connection::Connection;
-use server::session::auth::Sessions;
-use std::collections::HashSet;
+use server::session::storage::Sessions;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream, tcp::OwnedReadHalf};
@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
     println!("XSCP Server is running on port 7878");
 
-    let sessions: Sessions = Arc::new(Mutex::new(HashSet::new()));
+    let sessions: Sessions = Arc::new(Mutex::new(HashMap::new()));
 
     loop {
         let (socket, peer_addr) = listener.accept().await?;

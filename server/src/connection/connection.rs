@@ -10,7 +10,8 @@
 //! - [`State::Aborted`] — connection terminated
 use std::net::SocketAddr;
 use xscp::{XscpRequest, XscpResponse};
-use crate::session::auth::{Sessions, auth};
+use crate::session::auth::auth;
+use crate::session::storage::Sessions;
 
 /// All Connection States.
 ///
@@ -31,8 +32,8 @@ pub enum State {
 /// # Lifecycle
 ///
 /// While in [`State::Established`], the connection owns an entry in the
-/// shared [`Sessions`] set. The entry is removed automatically on drop,
-/// so the set always reflects currently-active sessions.
+/// shared [`Sessions`] map. The entry is removed automatically on drop,
+/// so the map always reflects currently-active sessions.
 pub struct Connection {
     peer_addr: SocketAddr,
     state: State,
@@ -63,19 +64,19 @@ impl Connection {
                 let response = self.negotiate(&request, attempts);
                 match response.status_code() {
                     200 => {
-                        println!("{} logged in successfully", self.peer_addr);
+                        println!("{} - Logged in successfully", self.peer_addr);
                         self.state = State::Established { source: request.source().to_string() };
                     }
                     400 => {
-                        println!("Invalid request from: {}", self.peer_addr);
+                        println!("{} - Invalid request", self.peer_addr);
                         self.state = State::Negotiating { attempts: attempts + 1 };
                     }
                     401 => {
-                        println!("Invalid Credentials from: {}", self.peer_addr);
+                        println!("{} - Invalid Credentials", self.peer_addr);
                         self.state = State::Negotiating { attempts: attempts + 1 };
                     }
                     402 => {
-                        println!("{} exceeded auth attempts", self.peer_addr);
+                        println!("{} - Exceeded auth attempts", self.peer_addr);
                         self.state = State::Aborted;
                     }
                     _ => {}
@@ -92,7 +93,7 @@ impl Connection {
 
     fn negotiate(&self, request: &XscpRequest, attempts: u8) -> XscpResponse<'static> {
         match request.opcode() {
-            xscp::OpCode::Login => auth(request, attempts, &self.sessions),
+            xscp::OpCode::Login => auth(request.source().to_string(), self.peer_addr, attempts, &self.sessions),
             _                   => XscpResponse::try_new(400, "INVALID REQUEST").unwrap(),
         }
     }
@@ -117,12 +118,11 @@ impl Drop for Connection {
 mod tests {
 
     use super::*;
-    use std::collections::HashSet;
+    use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
-    use crate::session::auth::Sessions;
 
     fn dummy_sessions() -> Sessions {
-        Arc::new(Mutex::new(HashSet::new()))
+        Arc::new(Mutex::new(HashMap::new()))
     }
 
     #[test]
@@ -146,7 +146,7 @@ mod tests {
     fn negotiating_to_negotiating() {
         let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
         let sessions = dummy_sessions();
-        sessions.lock().unwrap().insert("test".to_string());
+        sessions.lock().unwrap().insert("test".to_string(), peer_addr);
         let mut connection = Connection::new(peer_addr, sessions);
 
         assert_eq!(connection.state, State::Negotiating { attempts: 0 });
@@ -164,7 +164,7 @@ mod tests {
     fn negotiating_to_aborted() {
         let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
         let sessions = dummy_sessions();
-        sessions.lock().unwrap().insert("test".to_string());
+        sessions.lock().unwrap().insert("test".to_string(), peer_addr);
         let mut connection = Connection::new(peer_addr, sessions);
 
         assert_eq!(connection.state, State::Negotiating { attempts: 0 });
@@ -186,7 +186,7 @@ mod tests {
     fn invlaid_login_request() {
         let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
         let sessions = dummy_sessions();
-        sessions.lock().unwrap().insert("test".to_string());
+        sessions.lock().unwrap().insert("test".to_string(), peer_addr);
         let mut connection = Connection::new(peer_addr, sessions);
 
         let request = XscpRequest::try_new(xscp::OpCode::Send, "invalid", "msg").unwrap();

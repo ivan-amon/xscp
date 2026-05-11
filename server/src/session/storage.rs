@@ -1,29 +1,28 @@
-use std::collections::HashSet;
-use xscp::XscpRequest;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
 
-/// Registers a host session by storing its source name.
-///
-/// # Why overengineer this?
-///
-/// Callers depend on the behavior ("register, reject duplicates"), not on
-/// the storage being a [`HashSet`]. Hiding it behind a function lets the
-/// backend evolve — richer structure, mutex-guarded, persisted to disk —
-/// without touching any call site.
+pub type Sessions = Arc<Mutex<HashMap<String, SocketAddr>>>;
+
+/// Registers a host session by storing its source name and peer address.
 ///
 /// # Arguments
-/// - `request`: login request whose source name is registered.
-/// - `sessions`: set of active source names.
+/// - `source`: source name to register.
+/// - `peer`: remote socket address associated with the session.
+/// - `sessions`: map of active source names to their peer addresses.
 ///
 /// # Errors
 /// Returns `Err` if the source name is already registered.
 pub fn store_session(
-    request: &XscpRequest,
-    sessions: &mut HashSet<String>,
+    source: String,
+    peer: SocketAddr,
+    sessions: &mut HashMap<String, SocketAddr>,
 ) -> Result<(), &'static str> {
     
-    if !sessions.insert(request.source().to_string()) {
+    if sessions.contains_key(&source) {
         return Err("Source name is already in use.");
     }
+    sessions.insert(source, peer);
     Ok(())
 }
 
@@ -31,49 +30,49 @@ pub fn store_session(
 mod tests {
 
     use super::*;
-    use xscp::OpCode;
 
-    fn login(source: &str) -> XscpRequest<'_> {
-        XscpRequest::try_new(OpCode::Login, source, "").unwrap()
+    fn addr(port: u16) -> SocketAddr {
+        SocketAddr::from(([127, 0, 0, 1], port))
     }
 
     #[test]
     fn correct_session() {
-        let mut sessions = HashSet::<String>::new();
-        let request = login("TEST");
+        let mut sessions = HashMap::<String, SocketAddr>::new();
+        let peer = addr(8001);
 
-        store_session(&request, &mut sessions).unwrap();
+        store_session("Test".to_string(), peer, &mut sessions).unwrap();
 
-        assert!(sessions.contains("TEST"));
+        assert_eq!(sessions.get("Test"), Some(&peer));
         assert_eq!(sessions.len(), 1);
     }
 
     #[test]
     fn multiple_correct_sessions() {
-        let mut sessions = HashSet::<String>::new();
+        let mut sessions = HashMap::<String, SocketAddr>::new();
 
-        let request_1 = login("TEST 1");
-        store_session(&request_1, &mut sessions).unwrap();
+        let peer_1 = addr(8001);
+        store_session("Test 1".to_string(), peer_1, &mut sessions).unwrap();
 
-        let request_2 = login("TEST 2");
-        store_session(&request_2, &mut sessions).unwrap();
+        let peer_2 = addr(8002);
+        store_session("Test 2".to_string(), peer_2, &mut sessions).unwrap();
 
-        assert!(sessions.contains("TEST 1"));
-        assert!(sessions.contains("TEST 2"));
+        assert_eq!(sessions.get("Test 1"), Some(&peer_1));
+        assert_eq!(sessions.get("Test 2"), Some(&peer_2));
         assert_eq!(sessions.len(), 2);
     }
 
     #[test]
     fn source_taken() {
-        let mut sessions = HashSet::<String>::new();
+        let mut sessions = HashMap::<String, SocketAddr>::new();
 
-        let request_1 = login("TEST");
-        store_session(&request_1, &mut sessions).unwrap();
+        let peer_1 = addr(8001);
+        store_session("Test".to_string(), peer_1, &mut sessions).unwrap();
 
-        let request_2 = login("TEST");
-        let err = store_session(&request_2, &mut sessions).unwrap_err();
+        let peer_2 = addr(8002);
+        let err = store_session("Test".to_string(), peer_2, &mut sessions).unwrap_err();
 
         assert_eq!("Source name is already in use.", err);
         assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions.get("Test"), Some(&peer_1));
     }
 }
