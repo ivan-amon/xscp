@@ -1,4 +1,5 @@
 //! # XSCP Server.
+use server::Action;
 use server::connection::connection::Connection;
 use server::session::storage::Sessions;
 use std::collections::HashMap;
@@ -50,12 +51,25 @@ async fn run_connection(
             }
         };
 
-        let response = match XscpRequest::parse(&raw_request) {
-            Ok(request) => { connection.handle(request) },
-            Err(_) => { XscpResponse::try_new(400, "INVALID REQUEST").unwrap() }
+        match XscpRequest::parse(&raw_request) {
+            Ok(request) => { 
+                match connection.handle(request) {
+                    Action::Reply(response) => { 
+                        writer.write_all(response.reason_phrase().as_bytes()).await?
+                    },
+                    Action::ReplyAndClose(response) => {
+                        writer.write_all(response.reason_phrase().as_bytes()).await?;
+                        return Ok(());
+                    },
+                    Action::Close => {
+                        return Ok(());
+                    },
+                }},
+            Err(_) => { 
+                let response =  XscpResponse::try_new(400, "INVALID REQUEST").unwrap();
+                writer.write_all(response.reason_phrase().as_bytes()).await?;
+            }
         };
-
-        writer.write_all(response.reason_phrase().as_bytes()).await?; 
     }
 }
 
