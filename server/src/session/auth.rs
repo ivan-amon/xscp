@@ -12,14 +12,14 @@ pub fn auth(
 ) -> XscpResponse<'static> {
 
     if auth_attempts >= 2 {
-        return XscpResponse::try_new(402, "TOO MANY ATTEMPTS").unwrap();
+        return XscpResponse::try_new(402, "Too Many Attempts").unwrap();
     }
 
     let mut guard = sessions.lock().unwrap();
 
     match store_session(source, peer, &mut guard) {
-        Ok(_)  => XscpResponse::try_new(200, "LOGIN SUCCESSFUL").unwrap(),
-        Err(_) => XscpResponse::try_new(401, "INVALID CREDENTIALS").unwrap(),
+        Ok(_)  => XscpResponse::try_new(200, "Login Successful").unwrap(),
+        Err(_) => XscpResponse::try_new(401, "Invalid Credentials").unwrap(),
     }
 }
 
@@ -39,7 +39,7 @@ mod tests {
         let response = auth("Test".to_string(), peer, 0, &sessions);
 
         assert_eq!(response.status_code(), 200);
-        assert_eq!(response.reason_phrase(), "LOGIN SUCCESSFUL");
+        assert_eq!(response.reason_phrase(), "Login Successful");
     }
 
     #[test]
@@ -51,7 +51,7 @@ mod tests {
         let response = auth("Test".to_string(), peer, 0, &sessions);
 
         assert_eq!(response.status_code(), 401);
-        assert_eq!(response.reason_phrase(), "INVALID CREDENTIALS");
+        assert_eq!(response.reason_phrase(), "Invalid Credentials");
     }
 
     #[test]
@@ -61,6 +61,6 @@ mod tests {
         let response = auth("Test".to_string(), peer, 3, &sessions);
 
         assert_eq!(response.status_code(), 402);
-        assert_eq!(response.reason_phrase(), "TOO MANY ATTEMPTS");
+        assert_eq!(response.reason_phrase(), "Too Many Attempts");
     }
 }

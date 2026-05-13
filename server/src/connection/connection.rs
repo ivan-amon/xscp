@@ -65,13 +65,12 @@ impl Connection {
     /// State transitions:
     /// - [`State::Negotiating`] → [`State::Established`] on successful auth.
     pub fn handle(&mut self, request: XscpRequest) -> Action {
-
-        let action = match &self.state {
+        return match &self.state {
 
             State::Negotiating { attempts } => {
                 let attempts = *attempts;
                 let response = self.negotiate(&request, attempts);
-                let action = match response.status_code() {
+                match response.status_code() {
                     200 => {
                         println!("{} - Logged in successfully", self.peer_addr);
                         self.state = State::Established { source: request.source().to_string() };
@@ -92,29 +91,26 @@ impl Connection {
                         self.state = State::Negotiating { attempts: attempts + 1 };
                         Action::Reply(response)
                     }
-                };
-                action
+                }
             },
 
             State::Established { source: _ } => {
-                let action = match request.opcode() {
+                match request.opcode() {
                     xscp::OpCode::Send => todo!(),
                     xscp::OpCode::Exit => Action::Close, // Connection will be closed after this, future state doesn't matter
                     _                  => {
-                        let response = XscpResponse::try_new(400, "INVALID REQUEST").unwrap();
+                        let response = XscpResponse::try_new(400, "Invalid Request").unwrap();
                         Action::Reply(response)
                     },
-                };
-                action
+                }
             },
         };
-        action
     }
 
     fn negotiate(&self, request: &XscpRequest, attempts: u8) -> XscpResponse<'static> {
         match request.opcode() {
             xscp::OpCode::Login => auth(request.source().to_string(), self.peer_addr, attempts, &self.sessions),
-            _                   => XscpResponse::try_new(400, "INVALID REQUEST").unwrap(),
+            _                   => XscpResponse::try_new(400, "Invalid Request").unwrap(),
         }
     }
 
@@ -247,7 +243,7 @@ mod tests {
         };
 
         assert_eq!(response.status_code(), 400);
-        assert_eq!(response.reason_phrase(), "INVALID REQUEST");
+        assert_eq!(response.reason_phrase(), "Invalid Request");
         assert_eq!(connection.state, State::Negotiating { attempts: 1 });
     }
 
@@ -286,7 +282,7 @@ mod tests {
         };
 
         assert_eq!(response.status_code(), 400);
-        assert_eq!(response.reason_phrase(), "INVALID REQUEST");
+        assert_eq!(response.reason_phrase(), "Invalid Request");
         assert_eq!(connection.state, State::Established { source: "test".to_string() });
         assert!(sessions.lock().unwrap().contains_key("test"));
     }

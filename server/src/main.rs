@@ -66,7 +66,7 @@ async fn run_connection(
                     },
                 }},
             Err(_) => { 
-                let response =  XscpResponse::try_new(400, "INVALID REQUEST").unwrap();
+                let response =  XscpResponse::try_new(400, "Invalid Request").unwrap();
                 writer.write_all(response.reason_phrase().as_bytes()).await?;
             }
         };
