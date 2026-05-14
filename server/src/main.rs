@@ -55,10 +55,10 @@ async fn run_connection(
             Ok(request) => { 
                 match connection.handle(request) {
                     Action::Reply(response) => { 
-                        writer.write_all(response.reason_phrase().as_bytes()).await?
+                        writer.write_all(response.to_string().as_bytes()).await?
                     },
                     Action::ReplyAndClose(response) => {
-                        writer.write_all(response.reason_phrase().as_bytes()).await?;
+                        writer.write_all(response.to_string().as_bytes()).await?;
                         return Ok(());
                     },
                     Action::Close => {
@@ -67,7 +67,7 @@ async fn run_connection(
                 }},
             Err(_) => { 
                 let response =  XscpResponse::try_new(400, "Invalid Request").unwrap();
-                writer.write_all(response.reason_phrase().as_bytes()).await?;
+                writer.write_all(response.to_string().as_bytes()).await?;
             }
         };
     }
