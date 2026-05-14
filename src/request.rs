@@ -2,6 +2,8 @@
 //!
 //! This module defines the logic to parse incoming XSCP request PDUs.
 
+use std::fmt;
+
 /// An XSCP request PDU.
 ///
 /// # Wire Format
@@ -91,6 +93,23 @@ impl<'a> XscpRequest<'a> {
     /// Returns the message of the request.
     pub fn message(&self) -> &str {
         self.message
+    }
+}
+
+impl<'a> fmt::Display for XscpRequest<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}|{}|{}\r\n", self.opcode, self.source, self.message)
+    }
+}
+
+impl fmt::Display for OpCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            OpCode::Login => "LOGN",
+            OpCode::Send => "SEND",
+            OpCode::Exit => "EXIT",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -224,5 +243,13 @@ mod tests {
         assert_eq!(OpCode::Send, request.opcode());
         assert_eq!("source", request.source());
         assert_eq!("message with | (pipe)", request.message());
+    }
+
+    // Other tests
+    #[test]
+    fn to_string_format() {
+        let request = XscpRequest::try_new(OpCode::Send, "Test", "Msg").unwrap();
+        let request = request.to_string();
+        assert_eq!(request, "SEND|Test|Msg\r\n".to_string());
     }
 }

@@ -2,6 +2,8 @@
 //!
 //! This module defines the logic to parse incoming XSCP notification PDUs.
 
+use std::fmt;
+
 /// An XSCP notification PDU.
 ///
 /// # Wire Format
@@ -92,6 +94,21 @@ impl<'a> XscpNotification<'a> {
     /// Returns the message of the notification.
     pub fn message(&self) -> &str {
         self.message
+    }
+}
+
+impl<'a> fmt::Display for XscpNotification<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}|{}|{}\r\n", self.notification_type, self.source, self.message)
+    }
+}
+
+impl fmt::Display for NotificationType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            NotificationType::Broadcast => "BRDC",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -220,5 +237,12 @@ mod tests {
         assert_eq!(result.notification_type(), NotificationType::Broadcast);
         assert_eq!(result.source(), "Alice");
         assert_eq!(result.message(), "Hello|ExtraField");
+    }
+
+    #[test]
+    fn to_string_format() {
+        let notification = XscpNotification::try_new(NotificationType::Broadcast, "Test", "Msg").unwrap();
+        let notification = notification.to_string();
+        assert_eq!(notification, "BRDC|Test|Msg\r\n".to_string());
     }
 }

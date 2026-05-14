@@ -2,6 +2,8 @@
 //!
 //! This module defines the logic to create and parse an XSCP response.
 
+use std::fmt;
+
 /// An XSCP response PDU.
 ///
 /// # Wire Format
@@ -77,6 +79,12 @@ impl<'a> XscpResponse<'a> {
     }
 }
 
+impl<'a> fmt::Display for XscpResponse<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}|{}\r\n", self.status_code, self.reason_phrase)
+    }
+}
+
 /// Possible errors when creating or parsing an XSCP response.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ResponseError {
@@ -88,6 +96,7 @@ pub enum ResponseError {
 
 #[cfg(test)]
 mod tests {
+
 
     use super::*;
 
@@ -167,4 +176,13 @@ mod tests {
         let response = XscpResponse::parse(raw_response).unwrap_err();
         assert_eq!(ResponseError::MalformedResponse, response);
     }
+
+    // Other tests
+    #[test]
+    fn to_string_format() {
+        let response = XscpResponse::try_new(200, "Ok").unwrap();
+        let response = response.to_string();
+        assert_eq!(response, "200|Ok\r\n".to_string());
+    }
+    
 }
