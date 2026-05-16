@@ -1,11 +1,11 @@
 //! # XSCP Server.
 use server::Action;
 use server::connection::connection::Connection;
+use server::io::SocketIo;
 use server::session::storage::Sessions;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream, tcp::OwnedReadHalf};
+use tokio::net::{TcpListener, TcpStream};
 use xscp::{XscpRequest, XscpResponse};
 
 /// Runs an XSCP Server instance on the 7878 port.
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let (socket, peer_addr) = listener.accept().await?;
-        println!("New connection from {}.", peer_addr);
+        println!("New connection from {peer_addr}");
 
         let sessions = Arc::clone(&sessions);
 
@@ -38,49 +38,37 @@ async fn run_connection(
 ) -> Result<(), Box<dyn std::error::Error>> {
 
     let peer_addr = socket.peer_addr().unwrap();
-    let (reader, mut writer) = socket.into_split();
-    let mut buf_reader = BufReader::new(reader);
+    let mut socket_io = SocketIo::new(socket);
     let mut connection = Connection::new(peer_addr, sessions);
 
     loop {
-        let raw_request = match read_socket(&mut buf_reader).await? {
+        let raw_request = match socket_io.read().await? {
             Some(raw) => raw,
             None => {
-                println!("Connection closed by client");
+                println!("Connection closed by {peer_addr}");
                 return Ok(());
             }
         };
 
         match XscpRequest::parse(&raw_request) {
-            Ok(request) => { 
+            Ok(request) => {
                 match connection.handle(request) {
-                    Action::Reply(response) => { 
-                        writer.write_all(response.to_string().as_bytes()).await?
+                    Action::Reply(response) => {
+                        socket_io.write(&response.to_string()).await?
                     },
                     Action::ReplyAndClose(response) => {
-                        writer.write_all(response.to_string().as_bytes()).await?;
+                        socket_io.write(&response.to_string()).await?;
                         return Ok(());
                     },
                     Action::Close => {
                         return Ok(());
                     },
                 }},
-            Err(_) => { 
+            Err(_) => {
+                println!("Error parsing request from {peer_addr}");
                 let response =  XscpResponse::try_new(400, "Invalid Request").unwrap();
-                writer.write_all(response.to_string().as_bytes()).await?;
+                socket_io.write(&response.to_string()).await?;
             }
-        };
-    }
-}
-
-async fn read_socket(
-    reader: &mut BufReader<OwnedReadHalf>,
-) -> Result<Option<String>, Box<dyn std::error::Error>> {
-
-    let mut buf = String::new();
-    match reader.read_line(&mut buf).await {
-        Ok(0) => Ok(None),
-        Ok(_) => Ok(Some(buf)),
-        Err(err) => Err(Box::new(err)),
+        }
     }
 }
