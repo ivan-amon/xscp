@@ -1,10 +1,15 @@
 //! # XSCP Server.
-use server::Action;
-use server::connection::connection::Connection;
-use server::io::SocketIo;
-use server::session::storage::Sessions;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
+use server::{
+    Action,
+    connection::Connection,
+    io::SocketIo,
+    session::storage::Sessions,
+};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 use tokio::net::{TcpListener, TcpStream};
 use xscp::{XscpRequest, XscpResponse};
 

@@ -51,7 +51,7 @@ cargo build --workspace
 
 - [x] Protocol crate (`xscp`) with request, response and notification PDUs
 - [x] TCP server/client foundation
-- [ ] Async I/O Server with Tokio
+- [x] Async I/O Server with Tokio
 - [ ] Multi-client broadcast
 - [ ] Channels
 - [ ] TLS support

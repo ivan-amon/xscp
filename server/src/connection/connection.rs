@@ -12,8 +12,7 @@
 //! [`Action::ReplyAndClose`]
 use std::net::SocketAddr;
 use xscp::{XscpRequest, XscpResponse};
-use crate::session::auth::auth;
-use crate::session::storage::Sessions;
+use crate::session::{auth, storage::Sessions};
 
 /// All Connection States.
 ///

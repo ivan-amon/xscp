@@ -1,6 +1,8 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 pub type Sessions = Arc<Mutex<HashMap<String, SocketAddr>>>;
 

@@ -1,6 +1,7 @@
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{TcpStream, tcp::{OwnedReadHalf, OwnedWriteHalf}},
+};
 
 pub struct SocketIo {
     reader: BufReader<OwnedReadHalf>,
