@@ -1,6 +1,8 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::sync::Mutex;
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::Mutex,
+};
 use xscp::XscpResponse;
 use super::storage::store_session;
 

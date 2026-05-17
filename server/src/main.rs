@@ -57,7 +57,7 @@ async fn run_connection(
 
         match XscpRequest::parse(&raw_request) {
             Ok(request) => {
-                match connection.handle(request) {
+                match connection.handle(request).await {
                     Action::Reply(response) => {
                         socket_io.write(&response.to_string()).await?
                     },
