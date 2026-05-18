@@ -12,7 +12,7 @@
 //! [`Action::ReplyAndClose`]
 use std::net::SocketAddr;
 use xscp::{XscpRequest, XscpResponse};
-use crate::{connection::broadcast::broadcast, session::{auth, storage::Sessions}};
+use crate::session::{auth, storage::Sessions};
 
 /// All Connection States.
 ///
@@ -32,8 +32,8 @@ pub enum State {
 /// # Lifecycle
 ///
 /// While in [`State::Established`], the connection owns an entry in the
-/// shared [`Sessions`] map. The entry is removed automatically on drop,
-/// so the map always reflects currently-active sessions.
+/// shared [`Sessions`] set. The entry is removed automatically on drop,
+/// so the set always reflects currently-active sessions.
 pub struct Connection {
     peer_addr: SocketAddr,
     state: State,
@@ -93,12 +93,10 @@ impl Connection {
                 }
             },
 
-            State::Established { source } => {
+            State::Established { source: _ } => {
                 match request.opcode() {
                     xscp::OpCode::Send => {
-                        broadcast(source, self.peer_addr, request.message(), &self.sessions).await;
-                        let response = XscpResponse::try_new(200, "Ok").unwrap();
-                        Action::Reply(response)
+                        todo!()
                     },
                     xscp::OpCode::Exit => Action::Close, // Connection will be closed after this, future state doesn't matter
                     _                  => {
@@ -112,7 +110,7 @@ impl Connection {
 
     fn negotiate(&self, request: &XscpRequest, attempts: u8) -> XscpResponse<'static> {
         match request.opcode() {
-            xscp::OpCode::Login => auth(request.source().to_string(), self.peer_addr, attempts, &self.sessions),
+            xscp::OpCode::Login => auth(request.source().to_string(), attempts, &self.sessions),
             _                   => XscpResponse::try_new(400, "Invalid Request").unwrap(),
         }
     }
@@ -161,11 +159,11 @@ pub enum Action {
 mod tests {
 
     use super::*;
-    use std::collections::HashMap;
+    use std::collections::HashSet;
     use std::sync::{Arc, Mutex};
 
     fn dummy_sessions() -> Sessions {
-        Arc::new(Mutex::new(HashMap::new()))
+        Arc::new(Mutex::new(HashSet::new()))
     }
 
     #[tokio::test]
@@ -191,7 +189,7 @@ mod tests {
     async fn negotiating_to_negotiating() {
         let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
         let sessions = dummy_sessions();
-        sessions.lock().unwrap().insert("test".to_string(), peer_addr);
+        sessions.lock().unwrap().insert("test".to_string());
         let mut connection = Connection::new(peer_addr, sessions);
 
         assert_eq!(connection.state, State::Negotiating { attempts: 0 });
@@ -210,7 +208,7 @@ mod tests {
     async fn attempts_exceeded_replies_and_closes() {
         let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
         let sessions = dummy_sessions();
-        sessions.lock().unwrap().insert("test".to_string(), peer_addr);
+        sessions.lock().unwrap().insert("test".to_string());
         let mut connection = Connection::new(peer_addr, sessions);
 
         assert_eq!(connection.state, State::Negotiating { attempts: 0 });
@@ -236,7 +234,7 @@ mod tests {
     async fn invalid_login_request() {
         let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
         let sessions = dummy_sessions();
-        sessions.lock().unwrap().insert("test".to_string(), peer_addr);
+        sessions.lock().unwrap().insert("test".to_string());
         let mut connection = Connection::new(peer_addr, sessions);
 
         let request = XscpRequest::try_new(xscp::OpCode::Send, "invalid", "msg").unwrap();
@@ -259,13 +257,13 @@ mod tests {
         let login = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
         assert!(matches!(connection.handle(login).await, Action::Reply(_)));
         assert_eq!(connection.state, State::Established { source: "test".to_string() });
-        assert!(sessions.lock().unwrap().contains_key("test"));
+        assert!(sessions.lock().unwrap().contains("test"));
 
         let exit = XscpRequest::try_new(xscp::OpCode::Exit, "test", "").unwrap();
         assert!(matches!(connection.handle(exit).await, Action::Close));
 
         drop(connection);
-        assert!(!sessions.lock().unwrap().contains_key("test"));
+        assert!(!sessions.lock().unwrap().contains("test"));
     }
 
     #[tokio::test]
@@ -287,6 +285,6 @@ mod tests {
         assert_eq!(response.status_code(), 400);
         assert_eq!(response.reason_phrase(), "Invalid Request");
         assert_eq!(connection.state, State::Established { source: "test".to_string() });
-        assert!(sessions.lock().unwrap().contains_key("test"));
+        assert!(sessions.lock().unwrap().contains("test"));
     }
 }

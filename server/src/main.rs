@@ -7,7 +7,7 @@ use server::{
     session::storage::Sessions,
 };
 use std::{
-    collections::HashMap,
+    collections::HashSet,
     sync::{Arc, Mutex},
 };
 use tokio::net::{TcpListener, TcpStream};
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
     println!("XSCP Server is running on port 7878");
 
-    let sessions: Sessions = Arc::new(Mutex::new(HashMap::new()));
+    let sessions: Sessions = Arc::new(Mutex::new(HashSet::new()));
 
     loop {
         let (socket, peer_addr) = listener.accept().await?;
