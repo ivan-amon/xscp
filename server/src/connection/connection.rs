@@ -97,6 +97,7 @@ impl Connection {
             State::Established { source } => {
                 match request.opcode() {
                     xscp::OpCode::Send => {
+                        println!("{} ({}) sent: {:?}", self.peer_addr, source, request.message());
                         let notification = XscpNotification::try_new(
                             xscp::NotificationType::Broadcast, 
                             source, 

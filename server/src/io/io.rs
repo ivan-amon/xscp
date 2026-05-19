@@ -17,7 +17,7 @@ impl SocketIo {
         }
     }
 
-    pub async fn read(&mut self) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    pub async fn read(&mut self) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> {
         let mut buf = String::new();
         match self.reader.read_line(&mut buf).await {
             Ok(0) => Ok(None),
