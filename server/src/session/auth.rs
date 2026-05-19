@@ -1,16 +1,23 @@
-use std::{
-    collections::HashSet,
-    sync::Mutex,
-};
-use xscp::XscpResponse;
+//! Authenticates clients during the XSCP login handshake.
 use super::storage::store_session;
+use std::{collections::HashSet, sync::Mutex};
+use xscp::XscpResponse;
 
+/// Authenticates a client login request and registers the source if valid.
+///
+/// Validates the authentication attempt count and checks if the source name
+/// is available (not already registered in the session set).
+///
+/// # Returns
+///
+/// - `200 OK` — authentication succeeded; source registered in the session store.
+/// - `401 Unauthorized` — source already registered or invalid credentials.
+/// - `402 Too Many Attempts` — exceeds the maximum number of authentication attempts (≥ 2).
 pub fn auth(
     source: String,
     auth_attempts: u8,
     sessions: &Mutex<HashSet<String>>,
 ) -> XscpResponse<'static> {
-
     if auth_attempts >= 2 {
         return XscpResponse::try_new(402, "Too Many Attempts").unwrap();
     }
@@ -18,7 +25,7 @@ pub fn auth(
     let mut guard = sessions.lock().unwrap();
 
     match store_session(source, &mut guard) {
-        Ok(_)  => XscpResponse::try_new(200, "Login Successful").unwrap(),
+        Ok(_) => XscpResponse::try_new(200, "Login Successful").unwrap(),
         Err(_) => XscpResponse::try_new(401, "Invalid Credentials").unwrap(),
     }
 }

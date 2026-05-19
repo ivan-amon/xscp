@@ -37,7 +37,10 @@ impl<'a> XscpResponse<'a> {
             return Err(ResponseError::InvalidReasonPhrase);
         }
 
-        Ok(Self { status_code, reason_phrase, })
+        Ok(Self {
+            status_code,
+            reason_phrase,
+        })
     }
 
     /// Parses a raw response string into an `XscpResponse`.
@@ -96,7 +99,6 @@ pub enum ResponseError {
 
 #[cfg(test)]
 mod tests {
-
 
     use super::*;
 
@@ -184,5 +186,4 @@ mod tests {
         let response = response.to_string();
         assert_eq!(response, "200|Ok\r\n".to_string());
     }
-    
 }

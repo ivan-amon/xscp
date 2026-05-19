@@ -10,9 +10,9 @@
 //!
 //! Termination is signaled via [`Action::Close`] /
 //! [`Action::ReplyAndClose`]
+use crate::session::{auth, storage::Sessions};
 use std::net::SocketAddr;
 use xscp::{XscpNotification, XscpRequest, XscpResponse};
-use crate::session::{auth, storage::Sessions};
 
 /// All Connection States.
 ///
@@ -37,7 +37,7 @@ pub enum State {
 pub struct Connection {
     peer_addr: SocketAddr,
     state: State,
-    sessions: Sessions
+    sessions: Sessions,
 }
 
 impl Connection {
@@ -47,7 +47,11 @@ impl Connection {
     /// - `peer_addr` — the remote socket address of the connecting client.
     /// - `sessions` — shared session store used to validate credentials during login.
     pub fn new(peer_addr: SocketAddr, sessions: Sessions) -> Self {
-        Self { peer_addr, state: State::Negotiating { attempts: 0 }, sessions }
+        Self {
+            peer_addr,
+            state: State::Negotiating { attempts: 0 },
+            sessions,
+        }
     }
 
     /// Processes the next incoming request and advances the connection state machine.
@@ -66,19 +70,22 @@ impl Connection {
     /// - [`State::Negotiating`] → [`State::Established`] on successful auth.
     pub async fn handle(&mut self, request: XscpRequest<'_>) -> Action {
         return match &self.state {
-
             State::Negotiating { attempts } => {
                 let attempts = *attempts;
                 let response = self.negotiate(&request, attempts);
                 match response.status_code() {
                     200 => {
                         println!("{} - Logged in successfully", self.peer_addr);
-                        self.state = State::Established { source: request.source().to_string() };
+                        self.state = State::Established {
+                            source: request.source().to_string(),
+                        };
                         Action::Reply(response)
                     }
                     401 => {
                         println!("{} - Invalid Credentials", self.peer_addr);
-                        self.state = State::Negotiating { attempts: attempts + 1 };
+                        self.state = State::Negotiating {
+                            attempts: attempts + 1,
+                        };
                         Action::Reply(response)
                     }
                     402 => {
@@ -88,34 +95,42 @@ impl Connection {
                     }
                     400 | _ => {
                         println!("{} - Invalid request", self.peer_addr);
-                        self.state = State::Negotiating { attempts: attempts + 1 };
+                        self.state = State::Negotiating {
+                            attempts: attempts + 1,
+                        };
                         Action::Reply(response)
                     }
                 }
-            },
+            }
 
             State::Established { source } => {
                 match request.opcode() {
                     xscp::OpCode::Send => {
-                        println!("{} ({}) sent: {:?}", self.peer_addr, source, request.message());
-                        let notification = XscpNotification::try_new(
-                            xscp::NotificationType::Broadcast, 
-                            source, 
+                        println!(
+                            "{} ({}) sent: {:?}",
+                            self.peer_addr,
+                            source,
                             request.message()
-                        ).unwrap();
-                        
-                        Action::Broadcast(BroadcastEnvelope { 
-                            from: source.to_string(), 
-                            payload: notification.to_string() 
+                        );
+                        let notification = XscpNotification::try_new(
+                            xscp::NotificationType::Broadcast,
+                            source,
+                            request.message(),
+                        )
+                        .unwrap();
+
+                        Action::Broadcast(BroadcastEnvelope {
+                            from: source.to_string(),
+                            payload: notification.to_string(),
                         })
-                    },
+                    }
                     xscp::OpCode::Exit => Action::Close, // Connection will be closed after this, future state doesn't matter
                     _ => {
                         let response = XscpResponse::try_new(400, "Invalid Request").unwrap();
                         Action::Reply(response)
-                    },
+                    }
                 }
-            },
+            }
         };
     }
 
@@ -129,13 +144,16 @@ impl Connection {
         }
     }
 
+    /// Processes a request while in [`State::Negotiating`].
+    ///
+    /// Only [`xscp::OpCode::Login`] requests are valid during negotiation.
+    /// Other opcodes return a `400 Bad Request` response.
     fn negotiate(&self, request: &XscpRequest, attempts: u8) -> XscpResponse<'static> {
         match request.opcode() {
             xscp::OpCode::Login => auth(request.source().to_string(), attempts, &self.sessions),
-            _                   => XscpResponse::try_new(400, "Invalid Request").unwrap(),
+            _ => XscpResponse::try_new(400, "Invalid Request").unwrap(),
         }
     }
-
 }
 
 impl Drop for Connection {
@@ -295,7 +313,12 @@ mod tests {
 
         let login = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
         assert!(matches!(connection.handle(login).await, Action::Reply(_)));
-        assert_eq!(connection.state, State::Established { source: "test".to_string() });
+        assert_eq!(
+            connection.state,
+            State::Established {
+                source: "test".to_string()
+            }
+        );
         assert!(sessions.lock().unwrap().contains("test"));
 
         let exit = XscpRequest::try_new(xscp::OpCode::Exit, "test", "").unwrap();
@@ -313,7 +336,12 @@ mod tests {
 
         let login = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
         assert!(matches!(connection.handle(login).await, Action::Reply(_)));
-        assert_eq!(connection.state, State::Established { source: "test".to_string() });
+        assert_eq!(
+            connection.state,
+            State::Established {
+                source: "test".to_string()
+            }
+        );
 
         let relogin = XscpRequest::try_new(xscp::OpCode::Login, "test", "").unwrap();
         let response = match connection.handle(relogin).await {
@@ -323,7 +351,12 @@ mod tests {
 
         assert_eq!(response.status_code(), 400);
         assert_eq!(response.reason_phrase(), "Invalid Request");
-        assert_eq!(connection.state, State::Established { source: "test".to_string() });
+        assert_eq!(
+            connection.state,
+            State::Established {
+                source: "test".to_string()
+            }
+        );
         assert!(sessions.lock().unwrap().contains("test"));
     }
 
@@ -336,7 +369,12 @@ mod tests {
         let login = XscpRequest::try_new(xscp::OpCode::Login, "Bob", "").unwrap();
         let _ = connection.handle(login).await;
 
-        assert_eq!(connection.state, State::Established { source: "Bob".to_string() });
+        assert_eq!(
+            connection.state,
+            State::Established {
+                source: "Bob".to_string()
+            }
+        );
 
         let request = XscpRequest::try_new(xscp::OpCode::Send, "Bob", "Hello World").unwrap();
         match connection.handle(request).await {
@@ -344,7 +382,7 @@ mod tests {
                 assert_eq!(envelope.from, "Bob");
                 assert_eq!(envelope.payload, "BRDC|Bob|Hello World\r\n");
             }
-            _ => panic!("expected Action::Broadcast")
+            _ => panic!("expected Action::Broadcast"),
         }
     }
 }

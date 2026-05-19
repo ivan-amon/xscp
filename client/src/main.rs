@@ -36,7 +36,8 @@ fn main() {
 
         let mut response = String::new();
         match buf_reader.read_line(&mut response) {
-            Ok(0) => { // EOF
+            Ok(0) => {
+                // EOF
                 println!("Server closed the connection");
             }
             Ok(_) => print!("Echo: {response}"),

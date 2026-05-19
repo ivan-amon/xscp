@@ -41,7 +41,11 @@ impl<'a> XscpNotification<'a> {
     /// # Errors
     /// - `InvalidSource`: The source contains disallowed characters or is of invalid length.
     /// - `InvalidMessage`: The message contains disallowed characters or is of invalid length.
-    pub fn try_new(notification_type: NotificationType, source: &'a str, message: &'a str) -> Result<Self, NotificationError> {
+    pub fn try_new(
+        notification_type: NotificationType,
+        source: &'a str,
+        message: &'a str,
+    ) -> Result<Self, NotificationError> {
         if source.contains(['|', '\r', '\n']) || source.len() < 3 || source.len() > 32 {
             return Err(NotificationError::InvalidSource);
         }
@@ -50,11 +54,15 @@ impl<'a> XscpNotification<'a> {
             return Err(NotificationError::InvalidMessage);
         }
 
-        Ok(Self { notification_type, source, message })
+        Ok(Self {
+            notification_type,
+            source,
+            message,
+        })
     }
 
     /// Parses a raw notification string into an `XscpNotification` struct.
-    /// 
+    ///
     /// # Errors
     /// - `UnknownNotificationType`: The notification type is not recognized.
     /// - `MalformedNotification`: The notification does not conform to the expected format.
@@ -69,9 +77,15 @@ impl<'a> XscpNotification<'a> {
         let raw_notification = raw_notification.trim_end_matches("\r\n");
         let mut parts = raw_notification.splitn(3, '|');
 
-        let notification_type = parts.next().ok_or(NotificationError::MalformedNotification)?;
-        let source = parts.next().ok_or(NotificationError::MalformedNotification)?;
-        let message = parts.next().ok_or(NotificationError::MalformedNotification)?;
+        let notification_type = parts
+            .next()
+            .ok_or(NotificationError::MalformedNotification)?;
+        let source = parts
+            .next()
+            .ok_or(NotificationError::MalformedNotification)?;
+        let message = parts
+            .next()
+            .ok_or(NotificationError::MalformedNotification)?;
 
         let notification_type = match notification_type {
             "BRDC" => NotificationType::Broadcast,
@@ -99,7 +113,11 @@ impl<'a> XscpNotification<'a> {
 
 impl<'a> fmt::Display for XscpNotification<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}|{}|{}\r\n", self.notification_type, self.source, self.message)
+        write!(
+            f,
+            "{}|{}|{}\r\n",
+            self.notification_type, self.source, self.message
+        )
     }
 }
 
@@ -113,7 +131,7 @@ impl fmt::Display for NotificationType {
 }
 
 /// Possible notification types in XSCP.
-/// 
+///
 /// Wire Format Reference:
 /// - Broadcast: `BRDC`
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -141,46 +159,58 @@ mod tests {
     // Creation tests
     #[test]
     fn correct_notification() {
-        let notification = XscpNotification::try_new(NotificationType::Broadcast, "Alice", "Hello, World!").unwrap();
-        assert_eq!(notification.notification_type(), NotificationType::Broadcast);
+        let notification =
+            XscpNotification::try_new(NotificationType::Broadcast, "Alice", "Hello, World!")
+                .unwrap();
+        assert_eq!(
+            notification.notification_type(),
+            NotificationType::Broadcast
+        );
         assert_eq!(notification.source(), "Alice");
         assert_eq!(notification.message(), "Hello, World!");
     }
 
     #[test]
     fn source_with_pipe() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Alice|Bob", "Hello!").unwrap_err();
+        let result = XscpNotification::try_new(NotificationType::Broadcast, "Alice|Bob", "Hello!")
+            .unwrap_err();
         assert_eq!(result, NotificationError::InvalidSource);
     }
 
     #[test]
     fn source_with_crlf() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Alice\r\nBob", "Hello!").unwrap_err();
+        let result =
+            XscpNotification::try_new(NotificationType::Broadcast, "Alice\r\nBob", "Hello!")
+                .unwrap_err();
         assert_eq!(result, NotificationError::InvalidSource);
     }
 
     #[test]
     fn source_empty() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "", "Hello!").unwrap_err();
+        let result =
+            XscpNotification::try_new(NotificationType::Broadcast, "", "Hello!").unwrap_err();
         assert_eq!(result, NotificationError::InvalidSource);
     }
 
     #[test]
     fn source_below_min() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Al", "Hello!").unwrap_err();
+        let result =
+            XscpNotification::try_new(NotificationType::Broadcast, "Al", "Hello!").unwrap_err();
         assert_eq!(result, NotificationError::InvalidSource);
     }
 
     #[test]
     fn source_above_max() {
         let long_source = "A".repeat(33);
-        let result = XscpNotification::try_new(NotificationType::Broadcast, &long_source, "Hello!").unwrap_err();
+        let result = XscpNotification::try_new(NotificationType::Broadcast, &long_source, "Hello!")
+            .unwrap_err();
         assert_eq!(result, NotificationError::InvalidSource);
     }
 
     #[test]
     fn message_with_pipe() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Bob", "Hello|World!").unwrap();
+        let result =
+            XscpNotification::try_new(NotificationType::Broadcast, "Bob", "Hello|World!").unwrap();
         assert_eq!(result.notification_type(), NotificationType::Broadcast);
         assert_eq!(result.source(), "Bob");
         assert_eq!(result.message(), "Hello|World!");
@@ -188,14 +218,17 @@ mod tests {
 
     #[test]
     fn message_with_crlf() {
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Bob", "Hello\r\nWorld!").unwrap_err();
+        let result =
+            XscpNotification::try_new(NotificationType::Broadcast, "Bob", "Hello\r\nWorld!")
+                .unwrap_err();
         assert_eq!(result, NotificationError::InvalidMessage);
     }
 
     #[test]
     fn message_above_max() {
         let long_message = "A".repeat(473);
-        let result = XscpNotification::try_new(NotificationType::Broadcast, "Bob", &long_message).unwrap_err();
+        let result = XscpNotification::try_new(NotificationType::Broadcast, "Bob", &long_message)
+            .unwrap_err();
         assert_eq!(result, NotificationError::InvalidMessage);
     }
 
@@ -204,7 +237,10 @@ mod tests {
     fn correct_parsing() {
         let raw_notification = "BRDC|Alice|Hello, World!\r\n";
         let notification = XscpNotification::parse(raw_notification).unwrap();
-        assert_eq!(notification.notification_type(), NotificationType::Broadcast);
+        assert_eq!(
+            notification.notification_type(),
+            NotificationType::Broadcast
+        );
         assert_eq!(notification.source(), "Alice");
         assert_eq!(notification.message(), "Hello, World!");
     }
@@ -241,7 +277,8 @@ mod tests {
 
     #[test]
     fn to_string_format() {
-        let notification = XscpNotification::try_new(NotificationType::Broadcast, "Test", "Msg").unwrap();
+        let notification =
+            XscpNotification::try_new(NotificationType::Broadcast, "Test", "Msg").unwrap();
         let notification = notification.to_string();
         assert_eq!(notification, "BRDC|Test|Msg\r\n".to_string());
     }

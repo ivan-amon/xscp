@@ -1,5 +1,5 @@
-pub mod session;
 pub mod connection;
 pub mod io;
+pub mod session;
 
 pub use connection::Action;

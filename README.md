@@ -62,7 +62,7 @@ The server will be reachable on `localhost:7878`. You can then connect to it wit
 - [x] Protocol crate (`xscp`) with request, response and notification PDUs
 - [x] TCP server/client foundation
 - [x] Async I/O Server with Tokio
-- [ ] Multi-client broadcast
+- [X] Multi-client broadcast
 - [ ] Channels
 - [ ] TLS support
 

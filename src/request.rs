@@ -38,7 +38,11 @@ impl<'a> XscpRequest<'a> {
     /// # Errors
     /// - `InvalidSource`: The source contains disallowed characters or is of invalid length.
     /// - `InvalidMessage`: The message contains disallowed characters or is of invalid length.
-    pub fn try_new(opcode: OpCode, source: &'a str, message: &'a str) -> Result<Self, RequestError> {
+    pub fn try_new(
+        opcode: OpCode,
+        source: &'a str,
+        message: &'a str,
+    ) -> Result<Self, RequestError> {
         if source.contains(['|', '\r', '\n']) || source.len() < 3 || source.len() > 32 {
             return Err(RequestError::InvalidSource);
         }
@@ -47,11 +51,15 @@ impl<'a> XscpRequest<'a> {
             return Err(RequestError::InvalidMessage);
         }
 
-        Ok(Self { opcode, source, message })
+        Ok(Self {
+            opcode,
+            source,
+            message,
+        })
     }
 
     /// Parses a raw request string into an `XscpRequest` struct.
-    /// 
+    ///
     /// # Errors
     /// - `UnknownOpcode`: The opcode is not recognized.
     /// - `MalformedRequest`: The request does not conform to the expected format.
@@ -114,7 +122,7 @@ impl fmt::Display for OpCode {
 }
 
 /// Possible OPCODEs in XSCP requests.
-/// 
+///
 /// Wire Format Reference:
 /// - Login: `LOGN`
 /// - Send:  `SEND`
@@ -186,13 +194,15 @@ mod tests {
 
     #[test]
     fn message_with_crlf() {
-        let request = XscpRequest::try_new(OpCode::Send, "source", "message with \r\n (CRLF)").unwrap_err();
+        let request =
+            XscpRequest::try_new(OpCode::Send, "source", "message with \r\n (CRLF)").unwrap_err();
         assert_eq!(RequestError::InvalidMessage, request);
     }
 
     #[test]
     fn message_with_pipe() {
-        let request = XscpRequest::try_new(OpCode::Send, "source", "message with | (pipe)").unwrap();
+        let request =
+            XscpRequest::try_new(OpCode::Send, "source", "message with | (pipe)").unwrap();
         assert_eq!(OpCode::Send, request.opcode());
         assert_eq!("source", request.source());
         assert_eq!("message with | (pipe)", request.message());

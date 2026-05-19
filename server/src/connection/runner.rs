@@ -1,20 +1,41 @@
 use crate::{
-    Action, 
-    connection::{BroadcastEnvelope, Connection}, 
-    io::SocketIo, 
-    session::storage::Sessions
+    Action,
+    connection::{BroadcastEnvelope, Connection},
+    io::SocketIo,
+    session::storage::Sessions,
+};
+use std::ops::ControlFlow;
+use tokio::{
+    net::TcpStream,
+    sync::broadcast::{Sender, error::RecvError},
 };
 use xscp::{XscpRequest, XscpResponse};
-use tokio::{net::TcpStream, sync::broadcast::{Sender, error::RecvError}};
-use std::ops::ControlFlow;
 
-/// Runs an XSCP connection, using the connection State Machine
+/// Runs the I/O loop for an XSCP connection, handling both incoming requests and broadcasts.
+///
+/// Manages a bidirectional communication loop using [`Connection`] FSM to process client requests.
+/// Concurrently listens for:
+/// - **Client requests** — incoming XSCP PDUs from the socket, processed via [`Connection::handle`]
+/// - **Broadcast messages** — notifications from other connection tasks via the shared channel
+///
+/// # Arguments
+///
+/// - `socket` — the TCP connection to the remote peer
+/// - `sessions` — shared session store for authentication
+/// - `broadcast_tx` — sender side of the broadcast channel; used to register this connection
+///   as a listener and forward outgoing broadcasts
+///
+/// # Termination
+///
+/// The loop exits when either:
+/// - The client closes the socket (EOF)
+/// - A request handler signals [`ControlFlow::Break`]
+/// - The broadcast channel is closed (all senders dropped)
 pub async fn run_connection(
     socket: TcpStream,
     sessions: Sessions,
-    broadcast_tx: Sender<BroadcastEnvelope>
+    broadcast_tx: Sender<BroadcastEnvelope>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-
     let peer_addr = socket.peer_addr()?;
     let mut socket_io = SocketIo::new(socket);
     let mut connection = Connection::new(peer_addr, sessions);
@@ -56,7 +77,6 @@ async fn handle_client_request(
     connection: &mut Connection,
     broadcast_tx: &Sender<BroadcastEnvelope>,
 ) -> Result<ControlFlow<()>, Box<dyn std::error::Error + Send + Sync>> {
-
     let raw_request = match read_result? {
         Some(raw) => raw,
         None => return Ok(ControlFlow::Break(())), //EOF
@@ -99,7 +119,6 @@ async fn handle_broadcast(
     socket_io: &mut SocketIo,
     connection: &Connection,
 ) -> Result<ControlFlow<()>, Box<dyn std::error::Error + Send + Sync>> {
-
     let envelope = match recv_result {
         Ok(env) => env,
         Err(RecvError::Lagged(n)) => {
@@ -121,6 +140,3 @@ async fn handle_broadcast(
     socket_io.write(&envelope.payload).await?;
     Ok(ControlFlow::Continue(()))
 }
-
-
-
