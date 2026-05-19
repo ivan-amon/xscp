@@ -11,7 +11,7 @@
 //! Termination is signaled via [`Action::Close`] /
 //! [`Action::ReplyAndClose`]
 use std::net::SocketAddr;
-use xscp::{XscpRequest, XscpResponse};
+use xscp::{XscpNotification, XscpRequest, XscpResponse};
 use crate::session::{auth, storage::Sessions};
 
 /// All Connection States.
@@ -60,7 +60,8 @@ impl Connection {
     ///   socket (e.g. `402` after exceeding authentication attempts).
     /// - [`Action::Close`] — close the socket without sending anything
     ///   (e.g. the peer issued an `EXIT` and is no longer reading).
-    ///
+    /// - [`Action::Broadcast`] — publish the envelope to all active
+    ///   connection writers via the broadcast channel.
     /// State transitions:
     /// - [`State::Negotiating`] → [`State::Established`] on successful auth.
     pub async fn handle(&mut self, request: XscpRequest<'_>) -> Action {
@@ -93,19 +94,38 @@ impl Connection {
                 }
             },
 
-            State::Established { source: _ } => {
+            State::Established { source } => {
                 match request.opcode() {
                     xscp::OpCode::Send => {
-                        todo!()
+                        let notification = XscpNotification::try_new(
+                            xscp::NotificationType::Broadcast, 
+                            source, 
+                            request.message()
+                        ).unwrap();
+                        
+                        Action::Broadcast(BroadcastEnvelope { 
+                            from: source.to_string(), 
+                            payload: notification.to_string() 
+                        })
                     },
                     xscp::OpCode::Exit => Action::Close, // Connection will be closed after this, future state doesn't matter
-                    _                  => {
+                    _ => {
                         let response = XscpResponse::try_new(400, "Invalid Request").unwrap();
                         Action::Reply(response)
                     },
                 }
             },
         };
+    }
+
+    /// Returns the authenticated source name if the connection is in [`State::Established`].
+    ///
+    /// Returns `None` if the connection is still negotiating or has no registered source.
+    pub fn source(&self) -> Option<&str> {
+        match &self.state {
+            State::Established { source } => Some(source),
+            _ => None,
+        }
     }
 
     fn negotiate(&self, request: &XscpRequest, attempts: u8) -> XscpResponse<'static> {
@@ -132,6 +152,18 @@ impl Drop for Connection {
     }
 }
 
+/// Encapsulates a broadcast message to be delivered to all connected clients.
+///
+/// Created when a client in [`State::Established`] sends a message via [`xscp::OpCode::Send`].
+/// The payload is a serialized [`XscpNotification`] with type [`xscp::NotificationType::Broadcast`].
+///
+/// [`XscpNotification`]: xscp::XscpNotification
+#[derive(Clone, Debug)]
+pub struct BroadcastEnvelope {
+    pub from: String,
+    pub payload: String,
+}
+
 /// Describes what [`run_connection`] should do after [`Connection::handle`]
 /// processes a request.
 ///
@@ -153,6 +185,12 @@ pub enum Action {
     /// Used when the peer signaled it is gone (e.g. an `EXIT` request) and
     /// no response is expected.
     Close,
+    /// Deliver a broadcast message to all connected clients.
+    ///
+    /// Occurs when a client in [`State::Established`] sends a message.
+    /// The I/O layer should forward the [`BroadcastEnvelope`] to all
+    /// active connection writers.
+    Broadcast(BroadcastEnvelope),
 }
 
 #[cfg(test)]
@@ -286,5 +324,26 @@ mod tests {
         assert_eq!(response.reason_phrase(), "Invalid Request");
         assert_eq!(connection.state, State::Established { source: "test".to_string() });
         assert!(sessions.lock().unwrap().contains("test"));
+    }
+
+    #[tokio::test]
+    async fn send_from_established_returns_broadcast_action() {
+        let peer_addr: SocketAddr = "127.0.0.1:5555".parse().unwrap();
+        let sessions = dummy_sessions();
+        let mut connection = Connection::new(peer_addr, sessions);
+
+        let login = XscpRequest::try_new(xscp::OpCode::Login, "Bob", "").unwrap();
+        let _ = connection.handle(login).await;
+
+        assert_eq!(connection.state, State::Established { source: "Bob".to_string() });
+
+        let request = XscpRequest::try_new(xscp::OpCode::Send, "Bob", "Hello World").unwrap();
+        match connection.handle(request).await {
+            Action::Broadcast(envelope) => {
+                assert_eq!(envelope.from, "Bob");
+                assert_eq!(envelope.payload, "BRDC|Bob|Hello World\r\n");
+            }
+            _ => panic!("expected Action::Broadcast")
+        }
     }
 }
