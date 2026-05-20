@@ -1,5 +1,3 @@
 pub mod connection;
-pub mod io;
+pub(crate) mod io;
 pub mod session;
-
-pub use connection::Action;

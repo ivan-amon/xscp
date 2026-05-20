@@ -1,5 +1,6 @@
 mod connection;
 mod runner;
 
-pub use connection::{Action, BroadcastEnvelope, Connection};
+pub(crate) use connection::{Action, Connection};
+pub use connection::BroadcastEnvelope;
 pub use runner::run_connection;

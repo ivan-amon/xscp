@@ -13,7 +13,7 @@ pub type Sessions = Arc<Mutex<HashSet<String>>>;
 ///
 /// # Errors
 /// Returns `Err` if the source name is already registered.
-pub fn store_session(source: String, sessions: &mut HashSet<String>) -> Result<(), &'static str> {
+pub(crate) fn store_session(source: String, sessions: &mut HashSet<String>) -> Result<(), &'static str> {
     if !sessions.insert(source) {
         return Err("Source name is already in use");
     }

@@ -1,3 +1,3 @@
-pub mod io;
+pub(crate) mod io;
 
-pub use io::SocketIo;
+pub(crate) use io::SocketIo;

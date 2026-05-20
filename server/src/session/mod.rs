@@ -1,4 +1,4 @@
 pub mod storage;
 
 mod auth;
-pub use auth::auth;
+pub(crate) use auth::auth;

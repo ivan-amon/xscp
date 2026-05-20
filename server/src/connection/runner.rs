@@ -1,6 +1,5 @@
 use crate::{
-    Action,
-    connection::{BroadcastEnvelope, Connection},
+    connection::{Action, BroadcastEnvelope, Connection},
     io::SocketIo,
     session::storage::Sessions,
 };
