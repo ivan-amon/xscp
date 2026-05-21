@@ -12,20 +12,19 @@ use xscp::XscpResponse;
 ///
 /// - `200 OK` — authentication succeeded; source registered in the session store.
 /// - `401 Unauthorized` — source already registered or invalid credentials.
-/// - `402 Too Many Attempts` — exceeds the maximum number of authentication attempts (≥ 2).
+/// - `402 Too Many Attempts` — credentials failed on the third attempt (`auth_attempts >= 2`).
 pub fn auth(
     source: String,
     auth_attempts: u8,
     sessions: &Mutex<HashSet<String>>,
 ) -> XscpResponse<'static> {
-    if auth_attempts >= 2 {
-        return XscpResponse::try_new(402, "Too Many Attempts").unwrap();
-    }
-
     let mut guard = sessions.lock().unwrap();
 
     match store_session(source, &mut guard) {
         Ok(_) => XscpResponse::try_new(200, "Login Successful").unwrap(),
+        Err(_) if auth_attempts >= 2 => {
+            XscpResponse::try_new(402, "Too Many Attempts").unwrap()
+        }
         Err(_) => XscpResponse::try_new(401, "Invalid Credentials").unwrap(),
     }
 }
@@ -55,8 +54,16 @@ mod tests {
     #[test]
     fn too_many_auth_attempts() {
         let sessions = Mutex::new(HashSet::<String>::new());
-        let response = auth("Test".to_string(), 3, &sessions);
+        sessions.lock().unwrap().insert("Test".to_string());
+        let response = auth("Test".to_string(), 2, &sessions);
         assert_eq!(response.status_code(), 402);
         assert_eq!(response.reason_phrase(), "Too Many Attempts");
+    }
+
+    #[test]
+    fn last_attempt_with_valid_credentials_succeeds() {
+        let sessions = Mutex::new(HashSet::<String>::new());
+        let response = auth("Test".to_string(), 2, &sessions);
+        assert_eq!(response.status_code(), 200);
     }
 }
