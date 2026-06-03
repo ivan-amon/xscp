@@ -57,6 +57,26 @@ docker compose up --build
 
 The server will be reachable on `localhost:7878`. You can then connect to it with the reference client or any TCP client that speaks XSCP.
 
+## Inspect PDUs in Wireshark 🦈
+
+The repo ships a Lua dissector at [`tools/wireshark/xscp.lua`](./tools/wireshark/xscp.lua) that decodes XSCP PDUs (requests, responses and notifications) on TCP port `7878`, with filterable fields such as `xscp.opcode`, `xscp.source` and `xscp.status_code`.
+
+Install it by soft-linking the file into your Wireshark personal plugins folder, so any edit to the dissector is picked up without copying it again:
+
+```sh
+# Linux / macOS
+mkdir -p ~/.config/wireshark/plugins
+ln -s "$(pwd)/tools/wireshark/xscp.lua" ~/.config/wireshark/plugins/xscp.lua
+```
+
+> The exact plugins path is shown in Wireshark under **Help > About Wireshark > Folders > "Personal Lua Plugins"**.
+
+Then:
+
+1. Open Wireshark and reload Lua plugins with **Ctrl+Shift+L** (or restart it).
+2. Capture on the **Loopback (`lo`)** interface and apply the display filter `xscp` (or `tcp.port == 7878`).
+3. Run the server and client, and expand the **XSCP Protocol** tree in the packet detail pane.
+
 ## Project Status 🚧
 
 - [x] Protocol crate (`xscp`) with request, response and notification PDUs
