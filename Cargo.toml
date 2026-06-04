@@ -14,4 +14,4 @@ categories = ["network-programming", "parser-implementations"]
 [dependencies]
 
 [workspace]
-members = ["client", "server"]
+members = ["client", "io", "server"]

@@ -1,8 +1,8 @@
 use crate::{
     connection::{Action, BroadcastEnvelope, Connection},
-    io::SocketIo,
     session::storage::Sessions,
 };
+use io::SocketIo;
 use std::ops::ControlFlow;
 use tokio::{
     net::TcpStream,

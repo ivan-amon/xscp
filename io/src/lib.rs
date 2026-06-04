@@ -1,4 +1,7 @@
 //! Non-blocking I/O wrapper for TCP socket operations.
+//!
+//! Shared between the XSCP server and client: both need buffered, line-based
+//! async reading and writing over a TCP socket.
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{

@@ -7,3 +7,4 @@ publish = false
 [dependencies]
 tokio = { version = "1.52.3", default-features = false, features = ["rt", "net", "io-util", "macros", "rt-multi-thread", "sync"] }
 xscp = { path = ".." }
+io = { path = "../io" }

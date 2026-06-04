@@ -17,6 +17,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "io"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -61,6 +68,7 @@ dependencies = [
 name = "server"
 version = "0.1.0"
 dependencies = [
+ "io",
  "tokio",
  "xscp",
 ]
