@@ -13,17 +13,16 @@ use xscp::{OpCode, XscpNotification, XscpRequest, XscpResponse};
 #[tokio::main]
 async fn main() {
     print_banner();
-    let socket = TcpStream::connect("127.0.0.1:7878")
-        .await
-        .expect("Failed to connect to server");
-    let mut socket_io = SocketIo::new(socket);
-    println!("Connected to 127.0.0.1:7878\n");
 
     let mut stdin_lines = BufReader::new(io::stdin()).lines();
 
+    // Connection
+    let (mut socket_io, address) = connect_to_server(&mut stdin_lines).await;
+    println!("Connected to {address}\n");
+
     // Auth
     let username = run_auth(&mut stdin_lines, &mut socket_io).await;
-    println!("Logged in as {username}!");
+    println!("Logged in as {username}!\n");
     print_prompt();
 
     // Active Connection
@@ -39,6 +38,56 @@ async fn main() {
 
         if flow.is_break() {
             return;
+        }
+    }
+}
+
+/// Prompts for the server IP and port and connects, retrying on failure.
+///
+/// The port defaults to `7878` when the user submits an empty line. Returns the
+/// connected [`SocketIo`] together with the resolved `ip:port` address. Exits the
+/// process cleanly on EOF (Ctrl-D).
+async fn connect_to_server(stdin_lines: &mut Lines<BufReader<Stdin>>) -> (SocketIo, String) {
+    const DEFAULT_PORT: &str = "7878";
+
+    loop {
+        let ip = read_line(stdin_lines, "XSCP Server IP: ").await;
+        let ip = match ip.trim() {
+            "localhost" => "127.0.0.1",
+            ip => ip,
+        };
+
+        let port = read_line(
+            stdin_lines,
+            &format!("Port (press Enter for {DEFAULT_PORT}): "),
+        )
+        .await;
+        let port = match port.trim() {
+            "" => DEFAULT_PORT,
+            port => port,
+        };
+
+        let address = format!("{ip}:{port}");
+        match TcpStream::connect(&address).await {
+            Ok(socket) => return (SocketIo::new(socket), address),
+            Err(_) => println!("Server not found at {address}, please try again\n"),
+        }
+    }
+}
+
+/// Prints `prompt` and reads one line from stdin.
+///
+/// Exits the process cleanly on EOF (Ctrl-D) and panics on an unexpected read
+/// error, mirroring how the rest of the startup flow handles stdin.
+async fn read_line(stdin_lines: &mut Lines<BufReader<Stdin>>, prompt: &str) -> String {
+    print!("{prompt}");
+    std::io::stdout().flush().expect("Failed to flush stdout");
+
+    match stdin_lines.next_line().await.expect("Error reading stdin") {
+        Some(text) => text,
+        None => {
+            println!("\nExiting...");
+            std::process::exit(0);
         }
     }
 }
@@ -179,6 +228,8 @@ async fn run_auth(stdin_lines: &mut Lines<BufReader<Stdin>>, socket_io: &mut Soc
     }
 }
 
+
+/// Prints the XSCP client banner if stdout is a terminal.
 fn print_banner() {
     if !std::io::stdout().is_terminal() {
         return;
