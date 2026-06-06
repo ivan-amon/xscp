@@ -5,3 +5,11 @@ services:
       dockerfile: server/Dockerfile
     ports:
       - "7878:7878"
+
+  client:
+    profiles: ["client"]
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    stdin_open: true
+    tty: true

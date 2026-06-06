@@ -11,17 +11,16 @@ COPY io ./io
 COPY server ./server
 COPY client ./client
 
-RUN cargo build --release -p server \
-    && strip target/release/server
+RUN cargo build --release -p client \
+    && strip target/release/client
 
 # ---- Runtime stage ----
 FROM alpine:latest
 
 RUN addgroup -S xscp && adduser -S xscp -G xscp
 
-COPY --from=builder /build/target/release/server /usr/local/bin/xscp-server
+COPY --from=builder /build/target/release/client /usr/local/bin/xscp-client
 
 USER xscp
-EXPOSE 7878
 
-ENTRYPOINT ["/usr/local/bin/xscp-server"]
+ENTRYPOINT ["/usr/local/bin/xscp-client"]

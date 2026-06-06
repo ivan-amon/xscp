@@ -40,9 +40,45 @@ cargo add xscp
 
 See the [crate README](./docs/README_CRATE.md) and [API docs](https://docs.rs/xscp) for usage examples.
 
-### Try a Chat Room Locally 💬
+### Try the Chat with Docker — No Rust Required 🐳
 
-Run the reference server and as many clients as you like to see the broadcast in action:
+The easiest way to play with XSCP. All you need is **Docker** — no Rust toolchain, no Cargo, nothing to compile by hand. The repo ships a `docker-compose.yml` that builds and wires everything for you.
+
+1. Clone the repo:
+
+   ```sh
+   git clone https://github.com/ivan-amon/xscp.git
+   cd xscp
+   ```
+
+2. Start the server. The first run builds the image; logs stream live in this terminal so you can watch connections come and go:
+
+   ```sh
+   docker compose up --build
+   ```
+
+   It listens on port `7878`. Leave this terminal open.
+
+3. In a **new terminal**, open a chat client:
+
+   ```sh
+   docker compose run --rm client
+   ```
+
+   When prompted:
+   - **XSCP Server IP:** type `server`
+   - **Port:** press Enter (defaults to `7878`)
+   - **Username:** pick any name
+
+4. Repeat step 3 in as many terminals as you like. Every message a client sends is broadcast to all the others in real time — open two or three and watch the conversation flow. 🎉
+
+To stop everything, press **Ctrl-C** in the server terminal (or run `docker compose down`).
+
+> **Why type `server` and not `localhost`?** Each client runs inside its own container, where `localhost` means *that* container — not the server. On Compose's private network the server is reachable by its service name, `server`. (If you ever run a client straight on your host instead, then `localhost` is the right answer.)
+
+### Try the Chat from Source (with Rust) 💬
+
+Already have the Rust toolchain? Build and run the workspace directly — no Docker needed:
 
 1. Clone and build the workspace:
 
@@ -58,23 +94,13 @@ Run the reference server and as many clients as you like to see the broadcast in
    cargo run -p server
    ```
 
-3. In a separate terminal, launch a client and log in:
+3. In a separate terminal, launch a client and log in (use `localhost` as the server IP):
 
    ```sh
    cargo run -p client
    ```
 
 Open as many extra terminals with `cargo run -p client` as you want: every message a client sends is broadcast to all the others, so you can watch the conversation flow across all of them in real time.
-
-## Try the Server with Docker ▶️
-
-If you just want to spin up the reference server without building it locally, the repo ships with a `docker-compose.yml` that builds and runs it for you:
-
-```sh
-docker compose up --build
-```
-
-The server will be reachable on `localhost:7878`. You can then connect to it with the reference client or any TCP client that speaks XSCP.
 
 ## Inspect PDUs in Wireshark 🦈
 
