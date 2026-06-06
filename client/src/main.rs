@@ -4,7 +4,7 @@
 
 use ::io::SocketIo;
 use client::{auth, clear_prompt_line, print_prompt};
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 use std::ops::ControlFlow;
 use tokio::io::{self, AsyncBufReadExt, BufReader, Lines, Stdin};
 use tokio::net::TcpStream;
@@ -12,11 +12,12 @@ use xscp::{OpCode, XscpNotification, XscpRequest, XscpResponse};
 
 #[tokio::main]
 async fn main() {
+    print_banner();
     let socket = TcpStream::connect("127.0.0.1:7878")
         .await
         .expect("Failed to connect to server");
     let mut socket_io = SocketIo::new(socket);
-    println!("Connected to 127.0.0.1:7878");
+    println!("Connected to 127.0.0.1:7878\n");
 
     let mut stdin_lines = BufReader::new(io::stdin()).lines();
 
@@ -176,4 +177,26 @@ async fn run_auth(stdin_lines: &mut Lines<BufReader<Stdin>>, socket_io: &mut Soc
             }
         }
     }
+}
+
+fn print_banner() {
+    if !std::io::stdout().is_terminal() {
+        return;
+    }
+
+    let version = "1.0.0";
+    let title = "XSCP Stream Communication Protocol";
+    let footer = "© 2026 Iván Amón | https://ivanamon.dev";
+
+    // Inner width = number of columns between the vertical borders.
+    let inner = 52;
+    // Each content line is " <text> ", so the text area is `inner - 2`.
+    let text_width = inner - 2;
+
+    println!("┌{:─<inner$}┐", "");
+    println!("│ {:<text_width$} │", format!("XSCP Client v{version}"));
+    println!("│ {title:<text_width$} │");
+    println!("├{:─<inner$}┤", "");
+    println!("│ {footer:<text_width$} │");
+    println!("└{:─<inner$}┘", "");
 }
