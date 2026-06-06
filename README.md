@@ -2,6 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/xscp.svg)](https://crates.io/crates/xscp)
 [![Docs.rs](https://docs.rs/xscp/badge.svg)](https://docs.rs/xscp)
+[![Specification](https://img.shields.io/badge/spec-xscp.ivanamon.dev-8A2BE2.svg)](https://xscp.ivanamon.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 ![Rust 2024 edition](https://img.shields.io/badge/rust-2024_edition-orange.svg)
 
@@ -15,7 +16,7 @@
 
 XSCP defines a minimal client-server architecture for real-time text communication over TCP. The protocol is intentionally simple: clients connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
 
-PDUs are line-oriented, UTF-8 and pipe-delimited, with a strict **512-byte budget**. The wire format is fully documented in the [`xscp` crate docs](https://docs.rs/xscp).
+PDUs are line-oriented, UTF-8 and pipe-delimited, with a strict **512-byte budget**. The full protocol is described in the [**XSCP specification**](https://xscp.ivanamon.dev/), and the Rust wire format is documented in the [`xscp` crate docs](https://docs.rs/xscp).
 
 ## Repository Layout 🗂️
 
@@ -37,15 +38,33 @@ The `xscp` crate is the only one published; the client and server are reference 
 cargo add xscp
 ```
 
-See the [crate README](./README_CRATE.md) and [API docs](https://docs.rs/xscp) for usage examples.
+See the [crate README](./docs/README_CRATE.md) and [API docs](https://docs.rs/xscp) for usage examples.
 
-### Build Everything from Source
+### Try a Chat Room Locally 💬
 
-```sh
-git clone https://github.com/ivan-amon/xscp.git
-cd xscp
-cargo build --workspace
-```
+Run the reference server and as many clients as you like to see the broadcast in action:
+
+1. Clone and build the workspace:
+
+   ```sh
+   git clone https://github.com/ivan-amon/xscp.git
+   cd xscp
+   cargo build
+   ```
+
+2. Start the server (it listens on `localhost:7878`):
+
+   ```sh
+   cargo run -p server
+   ```
+
+3. In a separate terminal, launch a client and log in:
+
+   ```sh
+   cargo run -p client
+   ```
+
+Open as many extra terminals with `cargo run -p client` as you want: every message a client sends is broadcast to all the others, so you can watch the conversation flow across all of them in real time.
 
 ## Try the Server with Docker ▶️
 

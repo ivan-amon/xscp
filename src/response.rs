@@ -15,7 +15,8 @@ use std::fmt;
 /// ```
 ///
 /// Fields are delimited by `|`. The total PDU size must not exceed
-/// **36 bytes** (delimiter and CRLF included).
+/// **38 bytes**: a 3-byte status code, the `|` delimiter, a 32-byte reason
+/// phrase and the trailing `\r\n`.
 #[derive(Debug)]
 pub struct XscpResponse<'a> {
     status_code: u16,

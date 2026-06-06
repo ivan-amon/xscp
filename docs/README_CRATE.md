@@ -26,7 +26,7 @@ Or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-xscp = "0.1"
+xscp = "1"
 ```
 
 ## Quick start
@@ -79,7 +79,7 @@ assert_eq!(parsed.source(), "alice");
 
 ## Protocol overview
 
-XSCP is a line-oriented, UTF-8, pipe-delimited protocol. Every PDU ends with `\r\n` and is at most **512 bytes** (responses are at most **36 bytes**).
+XSCP is a line-oriented, UTF-8, pipe-delimited protocol. Every PDU ends with `\r\n` and is at most **512 bytes** (responses are at most **38 bytes**: 3-byte status code + `|` + 32-byte reason phrase + `\r\n`).
 
 ### Request PDU
 
@@ -149,7 +149,7 @@ The crate is built against Rust **2024 edition**. Bumps to the MSRV are not cons
 
 ## License
 
-Licensed under the [MIT license](LICENSE).
+Licensed under the [MIT license](../LICENSE).
 
 ## Contributing
 
