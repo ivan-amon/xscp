@@ -12,13 +12,13 @@
 
 **XSCP** *(XSCP Stream Communication Protocol)* is a text-based communication protocol. This repository contains its **implementation in Rust**, along with a **client** and a **server**.
 
-## Overview 📖
+## Overview
 
 XSCP defines a minimal client-server architecture for real-time text communication over TCP. The protocol is intentionally simple: clients connect to a server, send messages, and the server broadcasts each message to every connected client. Think IRC, but stripped to its bare bones and written in modern Rust.
 
 PDUs are line-oriented, UTF-8 and pipe-delimited, with a strict **512-byte budget**. The full protocol is described in the [**XSCP specification**](https://xscp.ivanamon.dev/), and the Rust wire format is documented in the [`xscp` crate docs](https://docs.rs/xscp).
 
-## Repository Layout 🗂️
+## Repository Layout
 
 This repo is a Cargo workspace with three crates:
 
@@ -30,17 +30,9 @@ This repo is a Cargo workspace with three crates:
 
 The `xscp` crate is the only one published; the client and server are reference implementations meant to live alongside the protocol crate in this repository.
 
-## Getting Started 🚀
+## Getting Started
 
-### Use the Protocol Crate in Your Own Project
-
-```sh
-cargo add xscp
-```
-
-See the [crate README](./docs/README_CRATE.md) and [API docs](https://docs.rs/xscp) for usage examples.
-
-### Try the Chat with Docker — No Rust Required 🐳
+### Try the Chat with Docker — No Rust Required
 
 The easiest way to play with XSCP. All you need is **Docker** — no Rust toolchain, no Cargo, nothing to compile by hand. The repo ships a `docker-compose.yml` that builds and wires everything for you.
 
@@ -70,13 +62,17 @@ The easiest way to play with XSCP. All you need is **Docker** — no Rust toolch
    - **Port:** press Enter (defaults to `7878`)
    - **Username:** pick any name
 
-4. Repeat step 3 in as many terminals as you like. Every message a client sends is broadcast to all the others in real time — open two or three and watch the conversation flow. 🎉
+4. Repeat step 3 in as many terminals as you like. Every message a client sends is broadcast to all the others in real time — open two or three and watch the conversation flow.
+
+In the animation below, you can see a basic XSCP communication between multiple hosts.
+
+![animation](./docs/xscp-communication-animation.gif)
 
 To stop everything, press **Ctrl-C** in the server terminal (or run `docker compose down`).
 
 > **Why type `server` and not `localhost`?** Each client runs inside its own container, where `localhost` means *that* container — not the server. On Compose's private network the server is reachable by its service name, `server`. (If you ever run a client straight on your host instead, then `localhost` is the right answer.)
 
-### Try the Chat from Source (with Rust) 💬
+### Try the Chat from Source (with Rust)
 
 Already have the Rust toolchain? Build and run the workspace directly — no Docker needed:
 
@@ -102,7 +98,15 @@ Already have the Rust toolchain? Build and run the workspace directly — no Doc
 
 Open as many extra terminals with `cargo run -p client` as you want: every message a client sends is broadcast to all the others, so you can watch the conversation flow across all of them in real time.
 
-## Inspect PDUs in Wireshark 🦈
+### Use the Protocol Crate in Your Own Project
+
+```sh
+cargo add xscp
+```
+
+See the [crate README](./docs/README_CRATE.md) and [API docs](https://docs.rs/xscp) for usage examples.
+
+## Inspect PDUs in Wireshark
 
 The repo ships a Lua dissector at [`tools/wireshark/xscp.lua`](./tools/wireshark/xscp.lua) that decodes XSCP PDUs (requests, responses and notifications) on TCP port `7878`, with filterable fields such as `xscp.opcode`, `xscp.source` and `xscp.status_code`.
 
@@ -122,7 +126,7 @@ Then:
 2. Capture on the **Loopback (`lo`)** interface and apply the display filter `xscp` (or `tcp.port == 7878`).
 3. Run the server and client, and expand the **XSCP Protocol** tree in the packet detail pane.
 
-## Project Status 🚧
+## Project Status
 
 - [x] Protocol crate (`xscp`) with request, response and notification PDUs
 - [x] TCP server/client foundation
@@ -131,11 +135,11 @@ Then:
 - [ ] Channels
 - [ ] TLS support
 
-## Contributing 🤝
+## Contributing
 
-Issues and pull requests are welcome. If you want to discuss design changes to the protocol itself, please open an issue first.
+Issues and pull requests are welcome. If you want to discuss design changes to the protocol itself, please open an issue first. If you want to add TLS support **(because I'm not going to do it)**, PRs are welcome too.
 
-## License 📜
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
